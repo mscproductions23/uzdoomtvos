@@ -1,0 +1,4 @@
+engine/build-tvos/
+engine/build-mac/
+*.a
+app/**/*.a
