@@ -1,0 +1,494 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0106B3543D5BAFD1D3F1E5C2 /* BeamServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF09EFE7843ACB9D0D2FFBC8 /* BeamServer.swift */; };
+		0A53BEC272D0EA2CF1C961F8 /* FreedoomInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD7EA96B2D536EE80F67B0CF /* FreedoomInstaller.swift */; };
+		2D398BE140B3ED53F8009C68 /* WadLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4AABA0EBE63FFB3FCF8E2E0 /* WadLibrary.swift */; };
+		2E90BA52500908944D0D6091 /* LauncherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0A037F517F14E16CA289BE /* LauncherView.swift */; };
+		37A21350300D5657002C1792 /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 37A2134F300D5657002C1792 /* SDL2.framework */; };
+		37A21351300D5657002C1792 /* SDL2.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 37A2134F300D5657002C1792 /* SDL2.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		37C5E702300D1158002A4469 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 37C5E701300D1158002A4469 /* ZIPFoundation */; };
+		37C5E704300D1384002A4469 /* libuzdoom_full.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37C5E703300D1384002A4469 /* libuzdoom_full.a */; };
+		37C5E70A300D1405002A4469 /* EngineAnchor.m in Sources */ = {isa = PBXBuildFile; fileRef = 37C5E709300D1405002A4469 /* EngineAnchor.m */; };
+		37C5E70D300D15F3002A4469 /* libbz2.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 37C5E70C300D15F3002A4469 /* libbz2.tbd */; };
+		37C5E70F300D1C4D002A4469 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37C5E70E300D1C4D002A4469 /* SceneDelegate.swift */; };
+		37E57B82300CFEA300DC0C4C /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 37E57B81300CFEA300DC0C4C /* UIKit.framework */; };
+		37E57B84300CFEB400DC0C4C /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 37E57B83300CFEB400DC0C4C /* Metal.framework */; };
+		37E57B86300CFEBD00DC0C4C /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 37E57B85300CFEBD00DC0C4C /* AVFoundation.framework */; };
+		37E57B88300CFEC500DC0C4C /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 37E57B87300CFEC500DC0C4C /* CoreFoundation.framework */; };
+		37E57B8A300CFECE00DC0C4C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 37E57B89300CFECE00DC0C4C /* Foundation.framework */; };
+		37E57B8C300CFED500DC0C4C /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 37E57B8B300CFED500DC0C4C /* CoreAudio.framework */; };
+		37E57B8E300CFEDD00DC0C4C /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 37E57B8D300CFEDD00DC0C4C /* AudioToolbox.framework */; };
+		37E57B90300CFEE400DC0C4C /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 37E57B8F300CFEE400DC0C4C /* GameController.framework */; };
+		37E57B93300CFEF600DC0C4C /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 37E57B91300CFEEC00DC0C4C /* libc++.tbd */; };
+		37E57B98300D029300DC0C4C /* game_support.pk3 in Resources */ = {isa = PBXBuildFile; fileRef = 37E57B95300D029300DC0C4C /* game_support.pk3 */; };
+		37E57B99300D029300DC0C4C /* game_widescreen_gfx.pk3 in Resources */ = {isa = PBXBuildFile; fileRef = 37E57B96300D029300DC0C4C /* game_widescreen_gfx.pk3 */; };
+		37E57B9A300D029300DC0C4C /* uzdoom.pk3 in Resources */ = {isa = PBXBuildFile; fileRef = 37E57B97300D029300DC0C4C /* uzdoom.pk3 */; };
+		72604040CA538AC8E8CFCD3E /* EngineBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A34229302684279AA453F73 /* EngineBridge.swift */; };
+		8CF2E6B3292C6C35CA23EFB0 /* DoomCloudStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0C68F7AA1B7EFF7882BE3AB /* DoomCloudStore.swift */; };
+		FD7D4D18040CD704E0422DD0 /* UZDoomTVApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 231E9D443370E378C2761F11 /* UZDoomTVApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		37A21352300D5657002C1792 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				37A21351300D5657002C1792 /* SDL2.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		231E9D443370E378C2761F11 /* UZDoomTVApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UZDoomTVApp.swift; sourceTree = "<group>"; };
+		37A2134F300D5657002C1792 /* SDL2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2.framework; path = "../../Developer/doomtv/tvos-libs/SDL2.framework"; sourceTree = "<group>"; };
+		37C5E703300D1384002A4469 /* libuzdoom_full.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libuzdoom_full.a; path = "../../Developer/doomtv/tvos-libs/libuzdoom_full.a"; sourceTree = "<group>"; };
+		37C5E709300D1405002A4469 /* EngineAnchor.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = EngineAnchor.m; sourceTree = "<group>"; };
+		37C5E70B300D1407002A4469 /* UZDoomTV-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "UZDoomTV-Bridging-Header.h"; sourceTree = "<group>"; };
+		37C5E70C300D15F3002A4469 /* libbz2.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libbz2.tbd; path = usr/lib/libbz2.tbd; sourceTree = SDKROOT; };
+		37C5E70E300D1C4D002A4469 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		37E57B81300CFEA300DC0C4C /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		37E57B83300CFEB400DC0C4C /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		37E57B85300CFEBD00DC0C4C /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		37E57B87300CFEC500DC0C4C /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		37E57B89300CFECE00DC0C4C /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		37E57B8B300CFED500DC0C4C /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
+		37E57B8D300CFEDD00DC0C4C /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		37E57B8F300CFEE400DC0C4C /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = System/Library/Frameworks/GameController.framework; sourceTree = SDKROOT; };
+		37E57B91300CFEEC00DC0C4C /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
+		37E57B95300D029300DC0C4C /* game_support.pk3 */ = {isa = PBXFileReference; lastKnownFileType = file; name = game_support.pk3; path = "../../Developer/doomtv/tvos-libs/game_support.pk3"; sourceTree = "<group>"; };
+		37E57B96300D029300DC0C4C /* game_widescreen_gfx.pk3 */ = {isa = PBXFileReference; lastKnownFileType = file; name = game_widescreen_gfx.pk3; path = "../../Developer/doomtv/tvos-libs/game_widescreen_gfx.pk3"; sourceTree = "<group>"; };
+		37E57B97300D029300DC0C4C /* uzdoom.pk3 */ = {isa = PBXFileReference; lastKnownFileType = file; name = uzdoom.pk3; path = "../../Developer/doomtv/tvos-libs/uzdoom.pk3"; sourceTree = "<group>"; };
+		508BDA8BA80BB3658A9CAFA9 /* UZDoom-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "UZDoom-Bridging-Header.h"; sourceTree = "<group>"; };
+		6E43709F29D98F7EA1B46D2A /* .gitkeep */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitkeep; sourceTree = "<group>"; };
+		8A34229302684279AA453F73 /* EngineBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineBridge.swift; sourceTree = "<group>"; };
+		9B0A037F517F14E16CA289BE /* LauncherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherView.swift; sourceTree = "<group>"; };
+		BD7EA96B2D536EE80F67B0CF /* FreedoomInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreedoomInstaller.swift; sourceTree = "<group>"; };
+		D4AABA0EBE63FFB3FCF8E2E0 /* WadLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WadLibrary.swift; sourceTree = "<group>"; };
+		DF09EFE7843ACB9D0D2FFBC8 /* BeamServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BeamServer.swift; sourceTree = "<group>"; };
+		F0C68F7AA1B7EFF7882BE3AB /* DoomCloudStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoomCloudStore.swift; sourceTree = "<group>"; };
+		F45505F834E6C2F749F71273 /* UZDoomTV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UZDoomTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C5E01CFFB755F29EEADAB203 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				37C5E70D300D15F3002A4469 /* libbz2.tbd in Frameworks */,
+				37C5E704300D1384002A4469 /* libuzdoom_full.a in Frameworks */,
+				37E57B93300CFEF600DC0C4C /* libc++.tbd in Frameworks */,
+				37E57B90300CFEE400DC0C4C /* GameController.framework in Frameworks */,
+				37E57B8E300CFEDD00DC0C4C /* AudioToolbox.framework in Frameworks */,
+				37E57B8C300CFED500DC0C4C /* CoreAudio.framework in Frameworks */,
+				37E57B8A300CFECE00DC0C4C /* Foundation.framework in Frameworks */,
+				37E57B88300CFEC500DC0C4C /* CoreFoundation.framework in Frameworks */,
+				37E57B86300CFEBD00DC0C4C /* AVFoundation.framework in Frameworks */,
+				37E57B84300CFEB400DC0C4C /* Metal.framework in Frameworks */,
+				37E57B82300CFEA300DC0C4C /* UIKit.framework in Frameworks */,
+				37A21350300D5657002C1792 /* SDL2.framework in Frameworks */,
+				37C5E702300D1158002A4469 /* ZIPFoundation in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		37E57B80300CFEA300DC0C4C /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				37A2134F300D5657002C1792 /* SDL2.framework */,
+				37C5E70C300D15F3002A4469 /* libbz2.tbd */,
+				37C5E703300D1384002A4469 /* libuzdoom_full.a */,
+				37E57B91300CFEEC00DC0C4C /* libc++.tbd */,
+				37E57B8F300CFEE400DC0C4C /* GameController.framework */,
+				37E57B8D300CFEDD00DC0C4C /* AudioToolbox.framework */,
+				37E57B8B300CFED500DC0C4C /* CoreAudio.framework */,
+				37E57B89300CFECE00DC0C4C /* Foundation.framework */,
+				37E57B87300CFEC500DC0C4C /* CoreFoundation.framework */,
+				37E57B85300CFEBD00DC0C4C /* AVFoundation.framework */,
+				37E57B83300CFEB400DC0C4C /* Metal.framework */,
+				37E57B81300CFEA300DC0C4C /* UIKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		43848E0214D1D14AAFF885F1 = {
+			isa = PBXGroup;
+			children = (
+				37E57B95300D029300DC0C4C /* game_support.pk3 */,
+				37E57B96300D029300DC0C4C /* game_widescreen_gfx.pk3 */,
+				37E57B97300D029300DC0C4C /* uzdoom.pk3 */,
+				84E3B4A5FECDBE957307C143 /* App */,
+				CEE9223F6DA1E9F59BDAB695 /* Resources */,
+				37E57B80300CFEA300DC0C4C /* Frameworks */,
+				BC067CA6A9A15C8204CF6A96 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		84E3B4A5FECDBE957307C143 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				37C5E70E300D1C4D002A4469 /* SceneDelegate.swift */,
+				37C5E709300D1405002A4469 /* EngineAnchor.m */,
+				DF09EFE7843ACB9D0D2FFBC8 /* BeamServer.swift */,
+				F0C68F7AA1B7EFF7882BE3AB /* DoomCloudStore.swift */,
+				8A34229302684279AA453F73 /* EngineBridge.swift */,
+				BD7EA96B2D536EE80F67B0CF /* FreedoomInstaller.swift */,
+				9B0A037F517F14E16CA289BE /* LauncherView.swift */,
+				508BDA8BA80BB3658A9CAFA9 /* UZDoom-Bridging-Header.h */,
+				231E9D443370E378C2761F11 /* UZDoomTVApp.swift */,
+				D4AABA0EBE63FFB3FCF8E2E0 /* WadLibrary.swift */,
+				37C5E70B300D1407002A4469 /* UZDoomTV-Bridging-Header.h */,
+			);
+			name = App;
+			path = Sources/App;
+			sourceTree = "<group>";
+		};
+		BC067CA6A9A15C8204CF6A96 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F45505F834E6C2F749F71273 /* UZDoomTV.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		CEE9223F6DA1E9F59BDAB695 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				6E43709F29D98F7EA1B46D2A /* .gitkeep */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F5887321A69F4AFB6A4B259B /* UZDoomTV */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E3A3A8CBC9750FBD3F6B9173 /* Build configuration list for PBXNativeTarget "UZDoomTV" */;
+			buildPhases = (
+				EB3406478617A345688867C3 /* Sources */,
+				C5E01CFFB755F29EEADAB203 /* Frameworks */,
+				37E57B94300D027C00DC0C4C /* Resources */,
+				37A21352300D5657002C1792 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = UZDoomTV;
+			packageProductDependencies = (
+				37C5E701300D1158002A4469 /* ZIPFoundation */,
+			);
+			productName = UZDoomTV;
+			productReference = F45505F834E6C2F749F71273 /* UZDoomTV.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0FC4674D93B7A79548647940 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					F5887321A69F4AFB6A4B259B = {
+						DevelopmentTeam = YOURTEAMID;
+						LastSwiftMigration = 2700;
+					};
+				};
+			};
+			buildConfigurationList = 8625BBA7E4F6F1F391D082F7 /* Build configuration list for PBXProject "UZDoomTV" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 43848E0214D1D14AAFF885F1;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				37C5E700300D1158002A4469 /* XCLocalSwiftPackageReference "Vendor/ZIPFoundation" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = BC067CA6A9A15C8204CF6A96 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F5887321A69F4AFB6A4B259B /* UZDoomTV */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		37E57B94300D027C00DC0C4C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				37E57B98300D029300DC0C4C /* game_support.pk3 in Resources */,
+				37E57B99300D029300DC0C4C /* game_widescreen_gfx.pk3 in Resources */,
+				37E57B9A300D029300DC0C4C /* uzdoom.pk3 in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		EB3406478617A345688867C3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0106B3543D5BAFD1D3F1E5C2 /* BeamServer.swift in Sources */,
+				8CF2E6B3292C6C35CA23EFB0 /* DoomCloudStore.swift in Sources */,
+				37C5E70F300D1C4D002A4469 /* SceneDelegate.swift in Sources */,
+				37C5E70A300D1405002A4469 /* EngineAnchor.m in Sources */,
+				72604040CA538AC8E8CFCD3E /* EngineBridge.swift in Sources */,
+				0A53BEC272D0EA2CF1C961F8 /* FreedoomInstaller.swift in Sources */,
+				2E90BA52500908944D0D6091 /* LauncherView.swift in Sources */,
+				FD7D4D18040CD704E0422DD0 /* UZDoomTVApp.swift in Sources */,
+				2D398BE140B3ED53F8009C68 /* WadLibrary.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		0BC871F40CAA2816D63077F2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = UZDoomTV.entitlements;
+				DEVELOPMENT_TEAM = YOURTEAMID;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"/Users/mscproductions/Developer/doomtv/tvos-libs",
+				);
+				INFOPLIST_FILE = Sources/App/Info.plist;
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Used to receive WAD and save files beamed from your iPhone.";
+				LD_QUOTE_LINKER_ARGUMENTS_FOR_COMPILER_DRIVER = NO;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = "/Users/mscproductions/Developer/doomtv/tvos-libs";
+				OTHER_LDFLAGS = (
+					"-Wl,-undefined,dynamic_lookup",
+					"-Xlinker",
+					"-w",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mscproductions.uzdoomtv;
+				SDKROOT = appletvos;
+				SWIFT_OBJC_BRIDGING_HEADER = "Sources/App/UZDoomTV-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = 3;
+			};
+			name = Debug;
+		};
+		9D2178BF0E6F0977A0C3C0C6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = UZDoomTV.entitlements;
+				DEVELOPMENT_TEAM = YOURTEAMID;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"/Users/mscproductions/Developer/doomtv/tvos-libs",
+				);
+				INFOPLIST_FILE = Sources/App/Info.plist;
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Used to receive WAD and save files beamed from your iPhone.";
+				LD_QUOTE_LINKER_ARGUMENTS_FOR_COMPILER_DRIVER = NO;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = "/Users/mscproductions/Developer/doomtv/tvos-libs";
+				OTHER_LDFLAGS = (
+					"-Wl,-undefined,dynamic_lookup",
+					"-Xlinker",
+					"-w",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mscproductions.uzdoomtv;
+				SDKROOT = appletvos;
+				SWIFT_OBJC_BRIDGING_HEADER = "Sources/App/UZDoomTV-Bridging-Header.h";
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = 3;
+			};
+			name = Release;
+		};
+		9F984F9F8A789DBE360B866D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACH_O_TYPE = mh_execute;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+			};
+			name = Debug;
+		};
+		E0E1E73B502A22CFFA5AA005 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACH_O_TYPE = mh_execute;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		8625BBA7E4F6F1F391D082F7 /* Build configuration list for PBXProject "UZDoomTV" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9F984F9F8A789DBE360B866D /* Debug */,
+				E0E1E73B502A22CFFA5AA005 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		E3A3A8CBC9750FBD3F6B9173 /* Build configuration list for PBXNativeTarget "UZDoomTV" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0BC871F40CAA2816D63077F2 /* Debug */,
+				9D2178BF0E6F0977A0C3C0C6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		37C5E700300D1158002A4469 /* XCLocalSwiftPackageReference "Vendor/ZIPFoundation" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Vendor/ZIPFoundation;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		37C5E701300D1158002A4469 /* ZIPFoundation */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ZIPFoundation;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 0FC4674D93B7A79548647940 /* Project object */;
+}
