@@ -217,10 +217,15 @@ step_zmusic() {
     log_header "Step 4: zmusic"
 
     mkdir -p "$BUILD/zmusic"
+    # ZMusic and the engine each compile their own copy of i_module.cpp
+    # (class FModule). Linked statically into one framework they collide,
+    # so give ZMusic's copy different names.
+    local zm_rename="-DFModule=ZMusicFModule -DFModule_SetProgDir=ZMusicFModule_SetProgDir -DFModule_GetProgDir=ZMusicFModule_GetProgDir"
     run_step "zmusic_configure" cmake -S "$SRC/zmusic" -B "$BUILD/zmusic" \
         "${GENERATOR[@]}" \
         "${TVOS_CMAKE_ARGS[@]}" \
-        -DBUILD_SHARED_LIBS=OFF -DZMUSIC_POSIX_GLIB_STUBS=ON
+        -DBUILD_SHARED_LIBS=OFF -DZMUSIC_POSIX_GLIB_STUBS=ON \
+        "-DCMAKE_CXX_FLAGS=$zm_rename"
     run_step "zmusic_build" cmake --build "$BUILD/zmusic" --parallel "$JOBS"
     run_step "zmusic_install" cmake --install "$BUILD/zmusic"
 
