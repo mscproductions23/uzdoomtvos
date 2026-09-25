@@ -302,11 +302,23 @@ step_openal() {
 }
 
 step_moltenvk() {
-    # Cheap copy; always runs so a deleted app/Frameworks is restored
+    # Always runs; repackages xcframework with the current Xcode so DerivedData
+    # caches from a previous Xcode version do not cause "no XCFramework found" errors.
     log_header "Step 7: moltenvk"
 
     mkdir -p "$OUT_FW"
-    run_step "moltenvk_copy" rsync -a --delete "$SRC/moltenvk/MoltenVK/MoltenVK/dynamic/MoltenVK.xcframework" "$OUT_FW/"
+    local src_xcfw="$SRC/moltenvk/MoltenVK/MoltenVK/dynamic/MoltenVK.xcframework"
+
+    # Repackage with the current Xcode; the macOS slice is dropped (not needed here).
+    rm -rf "$OUT_FW/MoltenVK.xcframework"
+    run_step "moltenvk_repackage" xcodebuild -create-xcframework \
+        -framework "$src_xcfw/tvos-arm64_arm64e/MoltenVK.framework" \
+        -framework "$src_xcfw/tvos-arm64_x86_64-simulator/MoltenVK.framework" \
+        -framework "$src_xcfw/ios-arm64/MoltenVK.framework" \
+        -framework "$src_xcfw/ios-arm64_x86_64-simulator/MoltenVK.framework" \
+        -framework "$src_xcfw/xros-arm64/MoltenVK.framework" \
+        -framework "$src_xcfw/xros-arm64_x86_64-simulator/MoltenVK.framework" \
+        -output "$OUT_FW/MoltenVK.xcframework"
 
     local found
     found=$(find "$OUT_FW/MoltenVK.xcframework" -path "*tvos-arm64*/MoltenVK.framework/MoltenVK" ! -path "*simulator*" 2>/dev/null | sed -n "1,1p")
