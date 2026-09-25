@@ -126,7 +126,7 @@ step_preflight() {
     command -v curl >/dev/null || die "curl not found"
 
     echo "Tools:"
-    cmake --version | head -1
+    cmake --version | sed -n "1,1p"
     git --version
     echo "SDK path: $(xcrun --sdk appletvos --show-sdk-path)"
     echo "Generator: ${GENERATOR[*]}"
@@ -309,7 +309,7 @@ step_moltenvk() {
     run_step "moltenvk_copy" rsync -a --delete "$SRC/moltenvk/MoltenVK/MoltenVK/dynamic/MoltenVK.xcframework" "$OUT_FW/"
 
     local found
-    found=$(find "$OUT_FW/MoltenVK.xcframework" -path "*tvos-arm64*/MoltenVK.framework/MoltenVK" ! -path "*simulator*" 2>/dev/null | head -1)
+    found=$(find "$OUT_FW/MoltenVK.xcframework" -path "*tvos-arm64*/MoltenVK.framework/MoltenVK" ! -path "*simulator*" 2>/dev/null | sed -n "1,1p")
     [[ -n "$found" ]] || die "MoltenVK tvOS arm64 framework not found"
 }
 
@@ -324,7 +324,7 @@ step_host_tools() {
 
     [[ -f "$BUILD/uzdoom-host/ImportExecutables.cmake" ]] || die "ImportExecutables.cmake not found"
     local pk3
-    pk3=$(find "$BUILD/uzdoom-host" -maxdepth 2 -name "uzdoom.pk3" -type f | head -1)
+    pk3=$(find "$BUILD/uzdoom-host" -maxdepth 2 -name "uzdoom.pk3" -type f | sed -n "1,1p")
     [[ -n "$pk3" ]] || die "uzdoom.pk3 not found from host build"
 }
 
@@ -353,7 +353,7 @@ step_engine() {
     run_step "engine_build" cmake --build "$BUILD/uzdoom-tvos" --target zdoom --parallel "$JOBS"
 
     local fw
-    fw=$(find "$BUILD/uzdoom-tvos" -maxdepth 3 -type d -name "UZDoomEngine.framework" | head -1)
+    fw=$(find "$BUILD/uzdoom-tvos" -maxdepth 3 -type d -name "UZDoomEngine.framework" | sed -n "1,1p")
     [[ -n "$fw" ]] || die "UZDoomEngine.framework not found"
 }
 
@@ -362,14 +362,14 @@ step_package() {
     log_header "Step 10: package"
 
     local fw
-    fw=$(find "$BUILD/uzdoom-tvos" -maxdepth 3 -type d -name "UZDoomEngine.framework" | head -1)
+    fw=$(find "$BUILD/uzdoom-tvos" -maxdepth 3 -type d -name "UZDoomEngine.framework" | sed -n "1,1p")
 
     run_step "package_framework" rsync -a --delete "$fw" "$OUT_FW/"
 
     # Copy pk3s
     for pk3 in uzdoom.pk3 game_support.pk3 game_widescreen_gfx.pk3 brightmaps.pk3 lights.pk3; do
         local pfile
-        pfile=$(find "$BUILD/uzdoom-host" -maxdepth 2 -name "$pk3" -type f | head -1)
+        pfile=$(find "$BUILD/uzdoom-host" -maxdepth 2 -name "$pk3" -type f | sed -n "1,1p")
         if [[ -n "$pfile" ]]; then
             cp "$pfile" "$APP_DIR/"
         else
@@ -407,21 +407,21 @@ step_package() {
     [[ -f "$engine_bin" ]] || die "Engine binary not found"
 
     echo "Binary sanity checks:"
-    lipo -archs "$engine_bin" | grep -q arm64 || die "arm64 slice not found"
+    lipo -archs "$engine_bin" | grep arm64 >/dev/null || die "arm64 slice not found"
     echo "  ✓ arm64 slice present"
 
-    nm -gU "$engine_bin" | grep -q "_uzdoom_launch" || die "_uzdoom_launch symbol not found"
+    nm -gU "$engine_bin" | grep "_uzdoom_launch" >/dev/null || die "_uzdoom_launch symbol not found"
     echo "  ✓ _uzdoom_launch symbol present"
 
     echo "  Binary dependencies:"
-    otool -L "$engine_bin" | head -10
+    otool -L "$engine_bin" | sed -n "1,10p"
     if otool -L "$engine_bin" | grep -iE "sdl2|moltenvk" >/dev/null; then
         die "Engine incorrectly linked against SDL2 or MoltenVK"
     fi
     echo "  ✓ No SDL2 or MoltenVK dylib references"
 
     echo "  Build version info:"
-    otool -l "$engine_bin" | grep -A5 "LC_BUILD_VERSION" | grep -q "platform 3" || die "tvOS platform not set"
+    otool -l "$engine_bin" | grep -A5 "LC_BUILD_VERSION" | grep "platform 3" >/dev/null || die "tvOS platform not set"
     otool -l "$engine_bin" | grep -A5 "LC_BUILD_VERSION"
 }
 
