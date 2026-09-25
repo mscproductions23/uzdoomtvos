@@ -167,6 +167,9 @@ step_fetch() {
                 elif git -C "$SRC/$name" apply --check "$pfile" >/dev/null 2>&1; then
                     echo "  Applying..."
                     git -C "$SRC/$name" apply "$pfile"
+                # Patch was updated: reset the pristine clone and re-apply (one patch per repo)
+                elif git -C "$SRC/$name" reset -q --hard && git -C "$SRC/$name" clean -qfd && git -C "$SRC/$name" apply "$pfile"; then
+                    echo "  Patch changed: reset $name and re-applied"
                 else
                     die "Patch $(basename "$pfile") no longer matches $SRC/$name. Delete that folder and re-run: rm -rf '$SRC/$name'"
                 fi
