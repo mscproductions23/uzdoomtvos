@@ -303,6 +303,155 @@ index 7d55157..5dc7681 100644
  											   appropriateForURL:nil
  														  create:create
  														   error:nil];
+diff --git a/src/common/platform/posix/sdl/i_input.cpp b/src/common/platform/posix/sdl/i_input.cpp
+index 37807d5..7cfa61e 100644
+--- a/src/common/platform/posix/sdl/i_input.cpp
++++ b/src/common/platform/posix/sdl/i_input.cpp
+@@ -46,6 +46,10 @@
+ #include "keydef.h"
+ #include "i_interface.h"
+ #include "engineerrors.h"
++#ifdef UZ_TVOS
++#include "menustate.h"
++void S_SetSoundPaused(int state);
++#endif
+ #include "i_interface.h"
+ 
+ 
+@@ -224,6 +228,67 @@ static void I_CheckNativeMouse ()
+ 	}
+ }
+ 
++#ifdef UZ_TVOS
++// tvOS kills an app that submits GPU work while in the background, so when
++// the app is about to leave the foreground, finish pending GPU work and block
++// here (still pumping UIKit through SDL_WaitEvent) until it is back.
++static void I_TvosSuspend()
++{
++	S_SetSoundPaused(0);
++	if (screen != nullptr)
++		screen->WaitForCommands(false);
++
++	SDL_Event ev;
++	while (SDL_WaitEvent(&ev))
++	{
++		if (ev.type == SDL_QUIT || ev.type == SDL_APP_TERMINATING)
++			throw CExitEvent(0);
++		if (ev.type == SDL_APP_DIDENTERFOREGROUND)
++			break;
++	}
++	S_SetSoundPaused(1);
++}
++
++// The Siri Remote shows up as an SDL joystick with 2 axes (touch surface),
++// no hats and 3 buttons: 0 = click, 1 = play/pause, 2 = menu/back.
++static bool I_IsSiriRemote(SDL_JoystickID which)
++{
++	SDL_Joystick *joy = SDL_JoystickFromInstanceID(which);
++	return joy != nullptr && SDL_JoystickNumAxes(joy) == 2 &&
++		SDL_JoystickNumHats(joy) == 0 && SDL_JoystickNumButtons(joy) == 3;
++}
++
++// The remote has too few buttons for the generic joystick bindings, so its
++// buttons are sent as the keys that the default bindings already use.
++// The key chosen on press is remembered so the release matches it.
++static void I_PostSiriRemoteButton(const SDL_JoyButtonEvent &jb)
++{
++	static const int menuKeys[3] = { KEY_ENTER, KEY_BACKSPACE, KEY_ESCAPE };
++	static const int gameKeys[3] = { KEY_MOUSE1, KEY_SPACE, KEY_ESCAPE };
++	static int downKey[3] = { 0, 0, 0 };
++
++	if (jb.button >= 3)
++		return;
++
++	event_t event = { 0,0,0,0,0,0,0 };
++	if (jb.state == SDL_PRESSED)
++	{
++		downKey[jb.button] = menuactive != MENU_Off ? menuKeys[jb.button] : gameKeys[jb.button];
++		event.type = EV_KeyDown;
++		event.data1 = downKey[jb.button];
++	}
++	else
++	{
++		if (downKey[jb.button] == 0)
++			return;
++		event.type = EV_KeyUp;
++		event.data1 = downKey[jb.button];
++		downKey[jb.button] = 0;
++	}
++	D_PostEvent(&event);
++}
++#endif
++
+ void MessagePump (const SDL_Event &sev)
+ {
+ 	static int lastx = 0, lasty = 0;
+@@ -240,6 +305,12 @@ void MessagePump (const SDL_Event &sev)
+ 		ProcessSDLWindowEvent(sev.window);
+ 		break;
+ 
++#ifdef UZ_TVOS
++	case SDL_APP_WILLENTERBACKGROUND:
++		I_TvosSuspend();
++		break;
++#endif
++
+ 	case SDL_MOUSEBUTTONDOWN:
+ 	case SDL_MOUSEBUTTONUP:
+ 		if (!GUICapture)
+@@ -464,6 +535,13 @@ void MessagePump (const SDL_Event &sev)
+ 
+ 	case SDL_JOYBUTTONDOWN:
+ 	case SDL_JOYBUTTONUP:
++#ifdef UZ_TVOS
++		if (I_IsSiriRemote(sev.jbutton.which))
++		{
++			I_PostSiriRemoteButton(sev.jbutton);
++			break;
++		}
++#endif
+ 		event.type = sev.type == SDL_JOYBUTTONDOWN ? EV_KeyDown : EV_KeyUp;
+ 		event.data1 = KEY_FIRSTJOYBUTTON + sev.jbutton.button;
+ 		if(event.data1 != 0)
+diff --git a/src/common/platform/posix/sdl/i_joystick.cpp b/src/common/platform/posix/sdl/i_joystick.cpp
+index 7a7288c..fc146b1 100644
+--- a/src/common/platform/posix/sdl/i_joystick.cpp
++++ b/src/common/platform/posix/sdl/i_joystick.cpp
+@@ -132,7 +132,7 @@ public:
+ 	{
+ 		if(axis >= 5)
+ 			return Axes[axis].GameAxis == JOYAXIS_None;
+-		return Axes[axis].GameAxis == DefaultAxes[axis];
++		return Axes[axis].GameAxis == DefaultAxis(axis);
+ 	}
+ 	bool IsAxisScaleDefault(int axis)
+ 	{
+@@ -155,7 +155,7 @@ public:
+ 			if(i >= 5)
+ 				info.GameAxis = JOYAXIS_None;
+ 			else
+-				info.GameAxis = DefaultAxes[i];
++				info.GameAxis = DefaultAxis(i);
+ 			Axes.Push(info);
+ 		}
+ 	}
+@@ -253,6 +253,16 @@ public:
+ 	}
+ 
+ protected:
++	EJoyAxis DefaultAxis(int axis) const
++	{
++#ifdef UZ_TVOS
++		// Siri Remote touch surface: turn and move instead of strafe and move.
++		if (NumAxes == 2 && NumHats == 0 && SDL_JoystickNumButtons(Device) == 3)
++			return axis == 0 ? JOYAXIS_Yaw : JOYAXIS_Forward;
++#endif
++		return DefaultAxes[axis];
++	}
++
+ 	struct AxisInfo
+ 	{
+ 		FString Name;
 diff --git a/src/common/platform/posix/sdl/i_main.cpp b/src/common/platform/posix/sdl/i_main.cpp
 index fd80a26..46080e1 100644
 --- a/src/common/platform/posix/sdl/i_main.cpp
