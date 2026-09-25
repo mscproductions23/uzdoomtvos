@@ -128,7 +128,7 @@ index 67f85c7..91e8f8b 100644
  		module = dlopen("libvulkan.1.dylib", RTLD_NOW | RTLD_LOCAL);
  	if (!module)
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index d5e8955..bfa04f4 100644
+index d5e8955..08f7700 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
 @@ -25,6 +25,9 @@ endif()
@@ -207,7 +207,18 @@ index d5e8955..bfa04f4 100644
  
  target_include_directories( zdoom PRIVATE ${CMAKE_BINARY_DIR} )
  
-@@ -1450,7 +1482,7 @@ if( DEM_CMAKE_COMPILER_IS_GNUCXX_COMPATIBLE )
+@@ -1348,7 +1380,9 @@ if( NOT ZDOOM_OUTPUT_OLDSTYLE )
+ 	# RUNTIME_OUTPUT_DIRECTORY does not exist in CMake 2.4.
+ 	# Linux distributions are slow to adopt 2.6. :(
+ 	set_target_properties( zdoom PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ZDOOM_OUTPUT_DIR} )
+-	set_target_properties( zdoom PROPERTIES OUTPUT_NAME ${ZDOOM_EXE_NAME} )
++	if( NOT UZ_TVOS )
++		set_target_properties( zdoom PROPERTIES OUTPUT_NAME ${ZDOOM_EXE_NAME} )
++	endif()
+ else()
+ 	set_target_properties( zdoom PROPERTIES
+ 		RUNTIME_OUTPUT_NAME ${ZDOOM_EXE_NAME}
+@@ -1450,7 +1484,7 @@ if( DEM_CMAKE_COMPILER_IS_GNUCXX_COMPATIBLE )
  		APPEND_STRING PROPERTY COMPILE_FLAGS " ${SSE2_ENABLE}" )
  endif()
  
@@ -216,7 +227,7 @@ index d5e8955..bfa04f4 100644
  	set( LINK_FRAMEWORKS "-framework Cocoa -framework IOKit -framework OpenGL")
  
  	if( HAVE_VULKAN )
-@@ -1466,6 +1498,12 @@ if( APPLE )
+@@ -1466,6 +1500,12 @@ if( APPLE )
  	# Dymanic libraries like libvulkan.dylib or libMoltenVK.dylib will be loaded by dlopen()
  	# if placed in the directory with the main executable
  	set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rpath @executable_path" )

@@ -259,7 +259,7 @@ step_libvpx() {
             --enable-static --disable-shared --enable-pic \
             --disable-examples --disable-tools --disable-docs \
             --disable-unit-tests --disable-install-bins --disable-install-srcs \
-            --disable-vp9 --disable-vp8-encoder --enable-vp8-decoder \
+            --disable-vp8-encoder --disable-vp9-encoder --enable-vp8-decoder --enable-vp9-decoder \
             --extra-cflags="$flags" --extra-cxxflags="$flags"
         run_step "libvpx_build" make -j"$JOBS"
         run_step "libvpx_install" make install
@@ -443,7 +443,7 @@ step_summary() {
 
 START_TIME=$(date +%s)
 
-if [[ "$#" -gt 0 ]] && ([[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]); then
+if [[ "$#" -gt 0 ]] && { [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; }; then
     echo "Usage: $0 [<step>...]"
     echo ""
     echo "Steps: fetch sdl2 zmusic libvpx openal moltenvk host-tools engine package summary all"
