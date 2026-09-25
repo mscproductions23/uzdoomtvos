@@ -1,0 +1,468 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 2bb65f3..1c46c12 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -49,6 +49,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
+ 
+ 
+ list( APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake )
++if( CMAKE_SYSTEM_NAME STREQUAL "tvOS" )
++	set( UZ_TVOS ON )
++	add_definitions( -DUZ_TVOS=1 )
++endif()
++option( UZ_TOOLS_ONLY "Only configure host tools and pk3 targets (native pass of a cross build)" OFF )
+ include( FindPackageHandleStandardArgs )
+ 
+ # Support cross compiling
+@@ -90,7 +95,7 @@ function( add_pk3 PK3_NAME PK3_DIR )
+ 	# Generate target name. Just use "pk3" for main pk3 target.
+ 	string( REPLACE "." "_" PK3_TARGET ${PK3_NAME} )
+ 
+-	if( NOT ZDOOM_OUTPUT_OLDSTYLE )
++	if( NOT ZDOOM_OUTPUT_OLDSTYLE AND NOT UZ_TOOLS_ONLY )
+ 		add_custom_command( OUTPUT ${ZDOOM_OUTPUT_DIR}/${PK3_NAME}
+ 			COMMAND zipdir -udf ${PK3_ZIPDIR_OPTIONS} ${ZDOOM_OUTPUT_DIR}/${PK3_NAME} ${PK3_DIR}
+ 			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ZDOOM_OUTPUT_DIR}/${PK3_NAME} $<TARGET_FILE_DIR:zdoom>/${PK3_NAME}
+@@ -227,6 +232,10 @@ endif()
+ option (HAVE_VULKAN "Enable Vulkan support" ON)
+ option (HAVE_GLES2 "Enable GLES2 support" ON)
+ 
++if( UZ_TVOS )
++	set( HAVE_GLES2 OFF )
++endif()
++
+ # no, we're not using external asmjit for now, we made too many modifications to our's.
+ # if the asmjit author uses our changes then we'll update this.
+ 
+@@ -304,7 +313,9 @@ else()
+ 
+ 
+ 	if( APPLE )
+-		set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13")
++		if( NOT UZ_TVOS )
++			set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13")
++		endif()
+ 		if( CMAKE_CXX_COMPILER_ID STREQUAL "GNU" )
+ 			# If we're compiling with a custom GCC on the Mac (which we know since g++-4.2 doesn't support C++11) statically link libgcc.
+ 			set( ALL_C_FLAGS "-static-libgcc" )
+@@ -336,14 +347,16 @@ option(FORCE_INTERNAL_BZIP2 "Use internal bzip2")
+ option(FORCE_INTERNAL_ASMJIT "Use internal asmjit" ON)
+ mark_as_advanced( FORCE_INTERNAL_ASMJIT )
+ 
+-if (HAVE_VULKAN)
+-	add_subdirectory( libraries/ZVulkan )
+-endif()
++if( NOT UZ_TOOLS_ONLY )
++	if (HAVE_VULKAN)
++		add_subdirectory( libraries/ZVulkan )
++	endif()
+ 
+-add_subdirectory( libraries/ZWidget )
+-add_subdirectory( libraries/webp )
++	add_subdirectory( libraries/ZWidget )
++	add_subdirectory( libraries/webp )
+ 
+-add_subdirectory( libraries/discordrpc EXCLUDE_FROM_ALL )
++	add_subdirectory( libraries/discordrpc EXCLUDE_FROM_ALL )
++endif()
+ set( DRPC_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libraries/discordrpc/include" )
+ set( DRPC_LIBRARIES discord-rpc )
+ set( DRPC_LIBRARY discord-rpc )
+@@ -366,12 +379,14 @@ if( ${HAVE_VM_JIT} )
+ 	if( ASMJIT_FOUND AND NOT FORCE_INTERNAL_ASMJIT )
+ 		message( STATUS "Using system asmjit, includes found at ${ASMJIT_INCLUDE_DIR}" )
+ 	else()
+-		message( STATUS "Using internal asmjit" )
+-		set( SKIP_INSTALL_ALL TRUE ) # Avoid installing asmjit alongside zdoom
+-		add_subdirectory( libraries/asmjit )
+-		set( ASMJIT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libraries/asmjit )
+-		set( ASMJIT_LIBRARIES asmjit )
+-		set( ASMJIT_LIBRARY asmjit )
++		if( NOT UZ_TOOLS_ONLY )
++			message( STATUS "Using internal asmjit" )
++			set( SKIP_INSTALL_ALL TRUE ) # Avoid installing asmjit alongside zdoom
++			add_subdirectory( libraries/asmjit )
++			set( ASMJIT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libraries/asmjit )
++			set( ASMJIT_LIBRARIES asmjit )
++			set( ASMJIT_LIBRARY asmjit )
++		endif()
+ 	endif()
+ endif()
+ 
+@@ -413,7 +428,10 @@ add_subdirectory( wadsrc_bm )
+ add_subdirectory( wadsrc_lights )
+ add_subdirectory( wadsrc_extra )
+ add_subdirectory( wadsrc_widepix )
+-add_subdirectory( src )
++
++if( NOT UZ_TOOLS_ONLY )
++	add_subdirectory( src )
++endif()
+ 
+ if( NOT CMAKE_CROSSCOMPILING )
+ 	export(TARGETS ${CROSS_EXPORTS} FILE "${CMAKE_BINARY_DIR}/ImportExecutables.cmake" )
+diff --git a/libraries/ZVulkan/src/volk/volk.c b/libraries/ZVulkan/src/volk/volk.c
+index 67f85c7..91e8f8b 100644
+--- a/libraries/ZVulkan/src/volk/volk.c
++++ b/libraries/ZVulkan/src/volk/volk.c
+@@ -29,6 +29,7 @@
+ 	#endif
+ #else
+ #	include <dlfcn.h>
++#	include <stdlib.h>
+ #endif
+ 
+ #ifdef __cplusplus
+@@ -77,7 +78,12 @@ VkResult volkInitialize(void)
+ 	// note: function pointer is cast through void function pointer to silence cast-function-type warning on gcc8
+ 	vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)(void(*)(void))GetProcAddress(module, "vkGetInstanceProcAddr");
+ #elif defined(__APPLE__)
+-	void* module = dlopen("libvulkan.dylib", RTLD_NOW | RTLD_LOCAL);
++	void* module = NULL;
++	const char* envPath = getenv("SDL_VULKAN_LIBRARY");
++	if (envPath)
++		module = dlopen(envPath, RTLD_NOW | RTLD_LOCAL);
++	if (!module)
++		module = dlopen("libvulkan.dylib", RTLD_NOW | RTLD_LOCAL);
+ 	if (!module)
+ 		module = dlopen("libvulkan.1.dylib", RTLD_NOW | RTLD_LOCAL);
+ 	if (!module)
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index d5e8955..bfa04f4 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -25,6 +25,9 @@ endif()
+ 
+ if( APPLE )
+     option( OSX_COCOA_BACKEND "Use native Cocoa backend instead of SDL" ON )
++	if( UZ_TVOS )
++		set( OSX_COCOA_BACKEND OFF )
++	endif()
+ endif()
+ 
+ option( ZDOOM_ENABLE_SWR "Enable software renderer" ON )
+@@ -151,8 +154,10 @@ if( NOT NO_OPENAL )
+ 			mark_as_advanced(CLEAR OPENAL_LIBRARY)
+ 			if( OPENAL_LIBRARY )
+ 				set( PROJECT_LIBRARIES ${OPENAL_LIBRARY} ${PROJECT_LIBRARIES} )
+-				if( APPLE )
++				if( APPLE AND NOT UZ_TVOS )
+ 					set( PROJECT_LIBRARIES ${PROJECT_LIBRARIES} "-framework AudioUnit -framework CoreAudio -framework ApplicationServices -framework AudioToolbox -framework CoreFoundation" )
++				elseif( UZ_TVOS )
++					set( PROJECT_LIBRARIES ${PROJECT_LIBRARIES} "-framework CoreAudio -framework AudioToolbox -framework AVFoundation -framework CoreFoundation" )
+ 				endif()
+ 			else()
+ 				set( NO_OPENAL ON )
+@@ -321,7 +326,12 @@ add_custom_target( revision_check ALL
+ 
+ # required libraries
+ 
+-set( PROJECT_LIBRARIES ${PROJECT_LIBRARIES} miniz "${BZIP2_LIBRARIES}" "${CMAKE_DL_LIBS}" "${DRPC_LIBRARIES}")
++if( UZ_TVOS )
++	# discord-rpc needs AppKit; richpresence.cpp is a no-op on tvOS.
++	set( PROJECT_LIBRARIES ${PROJECT_LIBRARIES} miniz "${BZIP2_LIBRARIES}" "${CMAKE_DL_LIBS}")
++else()
++	set( PROJECT_LIBRARIES ${PROJECT_LIBRARIES} miniz "${BZIP2_LIBRARIES}" "${CMAKE_DL_LIBS}" "${DRPC_LIBRARIES}")
++endif()
+ if (HAVE_VULKAN)
+ 	list( APPEND PROJECT_LIBRARIES "zvulkan" )
+ endif()
+@@ -464,7 +474,14 @@ if( WIN32 )
+ 
+ 	set( SYSTEM_SOURCES ${SYSTEM_SOURCES} win32/zdoom.rc )
+ elseif( APPLE )
+-	if( OSX_COCOA_BACKEND )
++	if( UZ_TVOS )
++		set( PLAT_OSX_SOURCES common/platform/posix/osx/i_specialpaths.mm common/platform/posix/sdl/i_system.mm )
++		set( SYSTEM_SOURCES_DIR common/platform/posix common/platform/posix/sdl )
++		# crashcatcher.c forks a debugger, which tvOS doesn't allow.
++		set( SYSTEM_SOURCES ${PLAT_SDL_SOURCES} )
++		list( REMOVE_ITEM SYSTEM_SOURCES common/platform/posix/sdl/crashcatcher.c )
++		set( OTHER_SYSTEM_SOURCES ${PLAT_WIN32_SOURCES} ${PLAT_COCOA_SOURCES} ${PLAT_UNIX_SOURCES} common/platform/posix/osx/iwadpicker_cocoa.mm common/platform/posix/sdl/crashcatcher.c )
++	elseif( OSX_COCOA_BACKEND )
+ 		set( SYSTEM_SOURCES_DIR common/platform/posix common/platform/posix/cocoa )
+ 		set( SYSTEM_SOURCES ${PLAT_COCOA_SOURCES} )
+ 		set( OTHER_SYSTEM_SOURCES ${PLAT_WIN32_SOURCES} ${PLAT_SDL_SOURCES} ${PLAT_UNIX_SOURCES} )
+@@ -1247,7 +1264,22 @@ set( GAME_SOURCES
+ set( GAME_NONPCH_SOURCES ${GAME_SOURCES} )
+ list( REMOVE_ITEM GAME_NONPCH_SOURCES ${PCH_SOURCES} )
+ 
+-add_executable( zdoom WIN32 MACOSX_BUNDLE ${GAME_SOURCES} )
++if( UZ_TVOS )
++	# On tvOS the engine is a framework that the Swift app links and embeds.
++	add_library( zdoom SHARED ${GAME_SOURCES} common/platform/posix/sdl/uzdoom_entry.cpp )
++	set_target_properties( zdoom PROPERTIES
++		FRAMEWORK TRUE
++		OUTPUT_NAME UZDoomEngine
++		MACOSX_FRAMEWORK_IDENTIFIER com.mscproductions.uzdoomengine
++		MACOSX_FRAMEWORK_SHORT_VERSION_STRING "4.14.3"
++		MACOSX_FRAMEWORK_BUNDLE_VERSION "1"
++		INSTALL_NAME_DIR "@rpath"
++		BUILD_WITH_INSTALL_NAME_DIR ON
++		INSTALL_RPATH "@executable_path/Frameworks;@loader_path/.."
++		BUILD_WITH_INSTALL_RPATH ON )
++else()
++	add_executable( zdoom WIN32 MACOSX_BUNDLE ${GAME_SOURCES} )
++endif()
+ 
+ target_include_directories( zdoom PRIVATE ${CMAKE_BINARY_DIR} )
+ 
+@@ -1450,7 +1482,7 @@ if( DEM_CMAKE_COMPILER_IS_GNUCXX_COMPATIBLE )
+ 		APPEND_STRING PROPERTY COMPILE_FLAGS " ${SSE2_ENABLE}" )
+ endif()
+ 
+-if( APPLE )
++if( APPLE AND NOT UZ_TVOS )
+ 	set( LINK_FRAMEWORKS "-framework Cocoa -framework IOKit -framework OpenGL")
+ 
+ 	if( HAVE_VULKAN )
+@@ -1466,6 +1498,12 @@ if( APPLE )
+ 	# Dymanic libraries like libvulkan.dylib or libMoltenVK.dylib will be loaded by dlopen()
+ 	# if placed in the directory with the main executable
+ 	set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rpath @executable_path" )
++elseif( UZ_TVOS )
++	target_link_libraries( zdoom
++		"-framework Foundation" "-framework UIKit" "-framework Metal" "-framework QuartzCore"
++		"-framework GameController" "-framework AVFoundation" "-framework AudioToolbox"
++		"-framework CoreAudio" "-framework CoreGraphics" "-framework CoreFoundation"
++		"-framework IOSurface" "-weak_framework CoreHaptics" iconv c++ )
+ endif()
+ 
+ if( WIN32 )
+diff --git a/src/common/objects/autosegs.cpp b/src/common/objects/autosegs.cpp
+index e9b3f93..49eb554 100644
+--- a/src/common/objects/autosegs.cpp
++++ b/src/common/objects/autosegs.cpp
+@@ -51,6 +51,7 @@
+ #elif defined __MACH__
+ #include <mach-o/getsect.h>
+ #include <mach-o/ldsyms.h>
++#include <dlfcn.h>
+ #endif
+ 
+ 
+@@ -104,12 +105,23 @@ void FAutoSeg::Initialize()
+ 
+ #elif defined __MACH__
+ 
++	// Look up the sections in the image that contains this code, which is
++	// the engine framework on tvOS rather than the main executable.
++	static const char imageAnchor = 0;
++	Dl_info info;
++	const mach_header_64* header = nullptr;
++	if (dladdr(&imageAnchor, &info) != 0)
++		header = static_cast<const mach_header_64*>(info.dli_fbase);
++
+ 	unsigned long size;
+ 
+-	if (uint8_t *const section = getsectiondata(&_mh_execute_header, AUTOSEG_MACH_SEGMENT, name, &size))
++	if (header != nullptr)
+ 	{
+-		begin = reinterpret_cast<void **>(section);
+-		end = reinterpret_cast<void **>(section + size);
++		if (uint8_t *const section = getsectiondata(header, AUTOSEG_MACH_SEGMENT, name, &size))
++		{
++			begin = reinterpret_cast<void **>(section);
++			end = reinterpret_cast<void **>(section + size);
++		}
+ 	}
+ 
+ #else // Linux and others with ELF executables
+diff --git a/src/common/platform/posix/osx/i_specialpaths.mm b/src/common/platform/posix/osx/i_specialpaths.mm
+index 7d55157..5dc7681 100644
+--- a/src/common/platform/posix/osx/i_specialpaths.mm
++++ b/src/common/platform/posix/osx/i_specialpaths.mm
+@@ -43,8 +43,17 @@ FString M_GetMacAppSupportPath(const bool create);
+ 
+ static FString GetSpecialPath(const NSSearchPathDirectory kind, const BOOL create = YES, const NSSearchPathDomainMask domain = NSUserDomainMask)
+ {
+-	NSURL* url = [[NSFileManager defaultManager] URLForDirectory:kind
+-														inDomain:domain
++#ifdef UZ_TVOS
++	// tvOS apps can only write to Caches, so every per-user folder lives there.
++	const NSSearchPathDirectory actualKind = NSCachesDirectory;
++	const NSSearchPathDomainMask actualDomain = NSUserDomainMask;
++#else
++	const NSSearchPathDirectory actualKind = kind;
++	const NSSearchPathDomainMask actualDomain = domain;
++#endif
++
++	NSURL* url = [[NSFileManager defaultManager] URLForDirectory:actualKind
++														inDomain:actualDomain
+ 											   appropriateForURL:nil
+ 														  create:create
+ 														   error:nil];
+diff --git a/src/common/platform/posix/sdl/i_main.cpp b/src/common/platform/posix/sdl/i_main.cpp
+index fd80a26..46080e1 100644
+--- a/src/common/platform/posix/sdl/i_main.cpp
++++ b/src/common/platform/posix/sdl/i_main.cpp
+@@ -99,6 +99,7 @@ void I_DetectOS()
+ {
+ 	FString operatingSystem;
+ 
++#ifndef UZ_TVOS
+ 	const char *paths[] = {"/etc/os-release", "/usr/lib/os-release"};
+ 
+ 	for (const char *path : paths)
+@@ -130,6 +131,7 @@ void I_DetectOS()
+ 		pclose(proc);
+ 		break;
+ 	}
++#endif
+ 
+ 	utsname unameInfo;
+ 
+diff --git a/src/common/platform/posix/sdl/i_system.cpp b/src/common/platform/posix/sdl/i_system.cpp
+index 1236a19..f24d499 100644
+--- a/src/common/platform/posix/sdl/i_system.cpp
++++ b/src/common/platform/posix/sdl/i_system.cpp
+@@ -92,6 +92,9 @@ void I_SetIWADInfo()
+ 
+ extern "C" int I_FileAvailable(const char* filename)
+ {
++#ifdef UZ_TVOS
++	return 0;
++#else
+ 	FString cmd = "which {0} >/dev/null 2>&1";
+ 	cmd.Substitute("{0}", filename);
+ 
+@@ -102,6 +105,7 @@ extern "C" int I_FileAvailable(const char* filename)
+ 	}
+ 
+ 	return 0;
++#endif
+ }
+ 
+ //
+@@ -310,7 +314,9 @@ int I_PickIWad (WadStuff *wads, int numwads, bool showwin, int defaultiwad, int&
+ 		return defaultiwad;
+ 	}
+ 
+-#ifdef __APPLE__
++#if defined(UZ_TVOS)
++	return defaultiwad;
++#elif defined(__APPLE__)
+ 	return I_PickIWad_Cocoa (wads, numwads, showwin, defaultiwad);
+ #else
+ 	return LauncherWindow::ExecModal(wads, numwads, defaultiwad, &autoloadflags, &extraArgs);
+@@ -374,6 +380,7 @@ unsigned int I_MakeRNGSeed()
+ 
+ void I_OpenShellFolder(const char* infolder)
+ {
++#ifndef UZ_TVOS
+ 	char* curdir = getcwd(NULL,0);
+ 
+ 	if (!chdir(infolder))
+@@ -395,5 +402,6 @@ void I_OpenShellFolder(const char* infolder)
+ 			Printf("Unable to open requested directory\n");
+ 	}
+ 	free(curdir);
++#endif
+ }
+ 
+diff --git a/src/common/platform/posix/sdl/i_system.mm b/src/common/platform/posix/sdl/i_system.mm
+index f9212f0..7652f78 100644
+--- a/src/common/platform/posix/sdl/i_system.mm
++++ b/src/common/platform/posix/sdl/i_system.mm
+@@ -3,6 +3,11 @@
+ 
+ void Mac_I_FatalError(const char* errortext)
+ {
++#ifdef UZ_TVOS
++	// tvOS has no CFUserNotification; SDL shows a UIAlertController instead.
++	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Fatal Error", errortext, nullptr);
++	SDL_Quit();
++#else
+ 	// Close window or exit fullscreen and release mouse capture
+ 	SDL_Quit();
+ 
+@@ -16,4 +21,5 @@ void Mac_I_FatalError(const char* errortext)
+ 			CFSTR( "Fatal Error" ), errorString, CFSTR( "Exit" ), NULL, NULL, &dummy );
+ 		CFRelease( errorString );
+ 	}
++#endif
+ }
+diff --git a/src/common/platform/posix/sdl/sdlglvideo.cpp b/src/common/platform/posix/sdl/sdlglvideo.cpp
+index 5907585..e4a2a89 100644
+--- a/src/common/platform/posix/sdl/sdlglvideo.cpp
++++ b/src/common/platform/posix/sdl/sdlglvideo.cpp
+@@ -621,7 +621,7 @@ int SystemGLFrameBuffer::GetClientHeight()
+ 
+ void SystemGLFrameBuffer::SetVSync( bool vsync )
+ {
+-#if defined (__APPLE__)
++#if defined (__APPLE__) && !defined(UZ_TVOS)
+ 	const GLint value = vsync ? 1 : 0;
+ 	CGLSetParameter( CGLGetCurrentContext(), kCGLCPSwapInterval, &value );
+ #else
+diff --git a/src/common/platform/posix/sdl/uzdoom_entry.cpp b/src/common/platform/posix/sdl/uzdoom_entry.cpp
+new file mode 100644
+index 0000000..60e857d
+--- /dev/null
++++ b/src/common/platform/posix/sdl/uzdoom_entry.cpp
+@@ -0,0 +1,14 @@
++// uzdoom_entry.cpp: C entry point for the tvOS app (UZDoomEngine.framework).
++// Part of UZDoom; see LICENSE for terms.
++
++#include <SDL2/SDL.h>
++
++// SDL.h renames the engine's main() in i_main.cpp to SDL_main on tvOS.
++// The Swift app owns UIApplicationMain, so we mark SDL's main as ready
++// (same SDL copy: SDL2 is linked statically into this framework only)
++// and run the engine's main loop on the calling (main) thread.
++extern "C" __attribute__((visibility("default"))) int uzdoom_launch(int argc, char** argv)
++{
++	SDL_SetMainReady();
++	return SDL_main(argc, argv);
++}
+diff --git a/src/common/rendering/gl_load/gl_system.h b/src/common/rendering/gl_load/gl_system.h
+index 6b40d73..6036f7d 100644
+--- a/src/common/rendering/gl_load/gl_system.h
++++ b/src/common/rendering/gl_load/gl_system.h
+@@ -26,7 +26,7 @@
+ //GL headers
+ #include "gl_load/gl_load.h"
+ 
+-#if defined(__APPLE__)
++#if defined(__APPLE__) && !defined(UZ_TVOS)
+ 	#include <OpenGL/OpenGL.h>
+ #endif
+ 
+diff --git a/src/common/rendering/gles/gles_system.h b/src/common/rendering/gles/gles_system.h
+index 0edec62..e61d633 100644
+--- a/src/common/rendering/gles/gles_system.h
++++ b/src/common/rendering/gles/gles_system.h
+@@ -68,7 +68,7 @@
+ 	#include "gl_load/gl_load.h"
+ #endif
+ 
+-#if defined(__APPLE__)
++#if defined(__APPLE__) && !defined(UZ_TVOS)
+ 	#include <OpenGL/OpenGL.h>
+ #endif
+ 
+diff --git a/src/common/thirdparty/richpresence.cpp b/src/common/thirdparty/richpresence.cpp
+index a8d8e81..c4bc7a6 100644
+--- a/src/common/thirdparty/richpresence.cpp
++++ b/src/common/thirdparty/richpresence.cpp
+@@ -35,6 +35,15 @@
+ **
+ */
+ 
++#ifdef UZ_TVOS
++
++// No Discord client on tvOS, and discord-rpc needs AppKit.
++void I_UpdateDiscordPresence(bool SendPresence, const char* curstatus, const char* appid, const char* steamappid)
++{
++}
++
++#else
++
+ #include <time.h>
+ #include <string.h>
+ 
+@@ -127,3 +136,4 @@ void I_UpdateDiscordPresence(bool SendPresence, const char* curstatus, const cha
+ 	}
+ }
+ 
++#endif // UZ_TVOS

@@ -1,4 +1,17 @@
-engine/build-tvos/
-engine/build-mac/
+# macOS / Xcode
+.DS_Store
+app/build/
+xcuserdata/
+*.xcuserstate
+
+# Everything tvos/build-tvos.sh downloads or produces
+tvos/work/
+app/Frameworks/
+app/*.pk3
+app/soundfonts/
+app/fm_banks/
+
+# Never commit commercial IWADs
+*.wad
+*.WAD
 *.a
-app/**/*.a
