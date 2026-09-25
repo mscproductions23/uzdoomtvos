@@ -1,7 +1,9 @@
 import SwiftUI
+import GameController
 
 struct LauncherView: View {
     @ObservedObject var library: WadLibrary
+    @StateObject private var controllers = ControllerMonitor()
 
     var body: some View {
         NavigationStack {
@@ -10,6 +12,17 @@ struct LauncherView: View {
                 // Game list — tvOS focus engine handles remote/controller navigation for free.
                 VStack(alignment: .leading, spacing: 24) {
                     Text("UZDoom").font(.largeTitle).bold()
+
+                    if !controllers.hasGamepad {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Connect a game controller to play", systemImage: "gamecontroller")
+                                .font(.headline)
+                            Text("The Siri Remote doesn't have enough buttons for Doom. Pair an Xbox, PlayStation or MFi controller in Settings → Remotes and Devices → Bluetooth.")
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: 700, alignment: .leading)
+                    }
 
                     if library.games.isEmpty {
                         Text("No games found yet.").foregroundStyle(.secondary)
@@ -32,6 +45,7 @@ struct LauncherView: View {
                             }
                             .frame(maxWidth: 700, alignment: .leading)
                         }
+                        .disabled(!controllers.hasGamepad)
                     }
                 }
 
@@ -77,5 +91,29 @@ struct LauncherView: View {
             }
             .padding(60)
         }
+    }
+}
+
+/// Tracks whether a full game controller (not the Siri Remote) is connected.
+@MainActor
+final class ControllerMonitor: ObservableObject {
+    @Published private(set) var hasGamepad = ControllerMonitor.gamepadConnected()
+
+    private var observers: [NSObjectProtocol] = []
+
+    init() {
+        let center = NotificationCenter.default
+        for name in [Notification.Name.GCControllerDidConnect, .GCControllerDidDisconnect] {
+            observers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    self?.hasGamepad = ControllerMonitor.gamepadConnected()
+                }
+            })
+        }
+    }
+
+    /// The Siri Remote only has a microGamepad profile; real controllers have extendedGamepad.
+    nonisolated static func gamepadConnected() -> Bool {
+        GCController.controllers().contains { $0.extendedGamepad != nil }
     }
 }

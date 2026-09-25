@@ -557,10 +557,10 @@ index 5907585..e4a2a89 100644
  #else
 diff --git a/src/common/platform/posix/sdl/uzdoom_entry.cpp b/src/common/platform/posix/sdl/uzdoom_entry.cpp
 new file mode 100644
-index 0000000..60e857d
+index 0000000..e390182
 --- /dev/null
 +++ b/src/common/platform/posix/sdl/uzdoom_entry.cpp
-@@ -0,0 +1,14 @@
+@@ -0,0 +1,17 @@
 +// uzdoom_entry.cpp: C entry point for the tvOS app (UZDoomEngine.framework).
 +// Part of UZDoom; see LICENSE for terms.
 +
@@ -573,6 +573,9 @@ index 0000000..60e857d
 +extern "C" __attribute__((visibility("default"))) int uzdoom_launch(int argc, char** argv)
 +{
 +	SDL_SetMainReady();
++	// SDL's own app delegate normally does this; without it SDL never sees
++	// the app lifecycle notifications (no SDL_APP_WILLENTERBACKGROUND).
++	SDL_iPhoneSetEventPump(SDL_TRUE);
 +	return SDL_main(argc, argv);
 +}
 diff --git a/src/common/rendering/gl_load/gl_system.h b/src/common/rendering/gl_load/gl_system.h
