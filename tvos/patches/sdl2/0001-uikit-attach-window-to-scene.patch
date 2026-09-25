@@ -1,0 +1,46 @@
+diff --git a/src/video/uikit/SDL_uikitwindow.m b/src/video/uikit/SDL_uikitwindow.m
+index 0e0ea05..f1145d1 100644
+--- a/src/video/uikit/SDL_uikitwindow.m
++++ b/src/video/uikit/SDL_uikitwindow.m
+@@ -155,7 +155,7 @@ int UIKit_CreateWindow(_THIS, SDL_Window *window)
+         SDL_VideoDisplay *display = SDL_GetDisplayForWindow(window);
+         SDL_DisplayData *data = (__bridge SDL_DisplayData *) display->driverdata;
+         SDL_Window *other;
+-        UIWindow *uiwindow;
++        UIWindow *uiwindow = nil;
+ #if !TARGET_OS_TV
+         const CGSize origsize = data.uiscreen.currentMode.size;
+ #endif
+@@ -207,7 +207,31 @@ int UIKit_CreateWindow(_THIS, SDL_Window *window)
+ 
+         /* ignore the size user requested, and make a fullscreen window */
+         /* !!! FIXME: can we have a smaller view? */
+-        uiwindow = [[SDL_uikitwindow alloc] initWithFrame:data.uiscreen.bounds];
++        uiwindow = nil;
++#if defined(__IPHONE_13_0) || defined(__TVOS_13_0)
++        if (@available(iOS 13.0, tvOS 13.0, *)) {
++            /* Scene-based apps (e.g. SwiftUI hosts) only display windows that
++               belong to a UIWindowScene. Prefer the foreground-active one. */
++            UIWindowScene *windowScene = nil;
++            for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
++                if ([scene isKindOfClass:[UIWindowScene class]]) {
++                    if (scene.activationState == UISceneActivationStateForegroundActive) {
++                        windowScene = (UIWindowScene *)scene;
++                        break;
++                    }
++                    if (windowScene == nil) {
++                        windowScene = (UIWindowScene *)scene;
++                    }
++                }
++            }
++            if (windowScene != nil) {
++                uiwindow = [[SDL_uikitwindow alloc] initWithWindowScene:windowScene];
++            }
++        }
++#endif
++        if (uiwindow == nil) {
++            uiwindow = [[SDL_uikitwindow alloc] initWithFrame:data.uiscreen.bounds];
++        }
+ 
+         /* put the window on an external display if appropriate. */
+         if (data.uiscreen != [UIScreen mainScreen]) {

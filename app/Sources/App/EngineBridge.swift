@@ -1,14 +1,10 @@
 import Foundation
 import GameController
 
-// Declare the C entry point directly — bypasses bridging header entirely.
-@_silgen_name("uzdoom_launch")
-func uzdoom_launch(_ argc: Int32, _ argv: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>) -> Int32
-
 /// Bridges the Swift launcher to the UZDoom engine.
-/// SDL requires UIApplicationMain to already be running before it can create
-/// a Metal window — so the engine must be called on the main thread, which
-/// hands control to SDL's run loop. The launcher UI is suspended from that point.
+/// Engine is shipped as UZDoomEngine.framework with SDL2 embedded.
+/// The engine's program directory is derived from argv[0], which points to the app bundle root where data files and frameworks reside.
+/// The engine must be called on the main thread, which hands control to SDL's run loop. The launcher UI is suspended from that point.
 final class EngineBridge {
 
     static let shared = EngineBridge()
@@ -31,23 +27,28 @@ final class EngineBridge {
         guard !isRunning else { return }
         isRunning = true
 
-        // Locate the engine's own pk3 data files from the app bundle.
         let bundle = Bundle.main
-        let enginePk3s: [String] = ["uzdoom", "game_support", "game_widescreen_gfx"]
-            .compactMap { bundle.path(forResource: $0, ofType: "pk3") }
+
+        // Verify uzdoom.pk3 exists in bundle root (engine finds it automatically).
+        let pk3Path = bundle.bundleURL.appendingPathComponent("uzdoom.pk3").path
+        if !FileManager.default.fileExists(atPath: pk3Path) {
+            print("[EngineBridge] Error: uzdoom.pk3 not found in bundle root")
+            self.isRunning = false
+            return
+        }
 
         // Config file lives in Caches alongside saves so it's writable on tvOS.
         let configURL = saveDirectory
             .deletingLastPathComponent()
             .appendingPathComponent("uzdoom.ini")
 
-        // Build the argument list exactly as you would on desktop.
-        var args: [String] = ["uzdoom"]
+        // Get log file path in Caches directory.
+        let cachesDirURL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        let logFilePath = cachesDirURL.appendingPathComponent("uzdoom.log").path
 
-        // Engine data files — must come before the IWAD.
-        for pk3 in enginePk3s {
-            args += ["-file", pk3]
-        }
+        // Build the argument list exactly as you would on desktop.
+        // argv[0] must point to bundle root so engine's program directory is correct.
+        var args: [String] = [bundle.bundleURL.appendingPathComponent("uzdoom").path]
 
         args += [
             "-iwad",    iwad.path,
@@ -55,18 +56,26 @@ final class EngineBridge {
             "-config",  configURL.path,
             "+vid_preferbackend", "1",   // Vulkan → MoltenVK → Metal
             "+vid_fullscreen",    "1",
+            "+logfile", logFilePath,
         ]
+
+        // Set SDL_VULKAN_LIBRARY to embedded MoltenVK so both SDL and engine use it.
+        let moltenVKPath = bundle.privateFrameworksURL!.appendingPathComponent("MoltenVK.framework/MoltenVK").path
+        if !FileManager.default.fileExists(atPath: moltenVKPath) {
+            print("[EngineBridge] Warning: MoltenVK not found at \(moltenVKPath)")
+        }
+        setenv("SDL_VULKAN_LIBRARY", moltenVKPath, 1)
 
         print("[EngineBridge] Launching UZDoom")
         print("  iwad:    \(iwad.path)")
         print("  savedir: \(saveDirectory.path)")
         print("  config:  \(configURL.path)")
-        print("  pk3s:    \(enginePk3s)")
+        print("  logfile: \(logFilePath)")
+        print("  moltenvk: \(moltenVKPath)")
         print("  controller: \(isControllerConnected)")
 
-        // Must run on the main thread — SDL's UIKit Metal layer requires
-        // UIApplicationMain to already own the run loop before SDL_Init
-        // can create a CAMetalLayer-backed window on tvOS.
+        // Must run on the main thread: SDL's UIKit backend creates its window
+        // there and pumps this run loop from inside the engine's game loop.
         DispatchQueue.main.async {
             var cargs = args.map { strdup($0) }
             cargs.append(nil)
