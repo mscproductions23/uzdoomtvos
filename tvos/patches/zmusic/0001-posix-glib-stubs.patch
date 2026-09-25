@@ -1,5 +1,5 @@
 diff --git a/thirdparty/fluidsynth/src/CMakeLists.txt b/thirdparty/fluidsynth/src/CMakeLists.txt
-index efcd28f..b18d73f 100644
+index efcd28f..84dcf89 100644
 --- a/thirdparty/fluidsynth/src/CMakeLists.txt
 +++ b/thirdparty/fluidsynth/src/CMakeLists.txt
 @@ -21,6 +21,9 @@
@@ -38,7 +38,7 @@ index efcd28f..b18d73f 100644
  target_include_directories ( fluidsynth PRIVATE
      ${CMAKE_CURRENT_SOURCE_DIR}
      ${CMAKE_CURRENT_SOURCE_DIR}/drivers
-@@ -153,10 +168,15 @@ target_include_directories ( fluidsynth PRIVATE
+@@ -153,10 +168,17 @@ target_include_directories ( fluidsynth PRIVATE
  )
  
  
@@ -50,8 +50,10 @@ index efcd28f..b18d73f 100644
 -
 +if (ZMUSIC_POSIX_GLIB_STUBS AND NOT WIN32)
 +   # Using POSIX glib stubs instead of system glib
++   # Plain flag, not the Threads::Threads target: that imported target is only
++   # visible in this directory, but zmusic re-links fluidsynth's usage requirements.
 +   find_package(Threads REQUIRED)
-+   target_link_libraries ( fluidsynth PUBLIC Threads::Threads )
++   target_link_libraries ( fluidsynth PUBLIC ${CMAKE_THREAD_LIBS_INIT} )
 +else()
 +   if (NOT WIN32)
 +      find_package(PkgConfig REQUIRED)
