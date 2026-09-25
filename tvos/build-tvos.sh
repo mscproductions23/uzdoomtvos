@@ -248,6 +248,12 @@ step_libvpx() {
         export CC CXX AR LD STRIP NM RANLIB
 
         flags="-arch arm64 -isysroot $SDK -mtvos-version-min=$TVOS_MIN"
+        # --extra-cflags doesn't reach configure's link test, so without these
+        # the linker defaults to macOS and rejects the tvOS objects.
+        CFLAGS="$flags"
+        CXXFLAGS="$flags"
+        LDFLAGS="$flags"
+        export CFLAGS CXXFLAGS LDFLAGS
         run_step "libvpx_configure" "$SRC/libvpx/configure" \
             --target=generic-gnu --prefix="$PREFIX" \
             --enable-static --disable-shared --enable-pic \
