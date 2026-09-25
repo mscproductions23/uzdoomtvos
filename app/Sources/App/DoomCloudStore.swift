@@ -42,6 +42,7 @@ enum CloudSchema {
 
 enum DoomCloudError: LocalizedError {
     case notSignedIntoiCloud
+    case iCloudDisabled
     case recordMissingAsset(String)
     case wadNotFound(String)
 
@@ -49,6 +50,8 @@ enum DoomCloudError: LocalizedError {
         switch self {
         case .notSignedIntoiCloud:
             return "This Apple TV is not signed into iCloud."
+        case .iCloudDisabled:
+            return "iCloud sync is not enabled in this build."
         case .recordMissingAsset(let name):
             return "Cloud record for \(name) has no file attached."
         case .wadNotFound(let name):
@@ -63,8 +66,15 @@ actor DoomCloudStore {
 
     static let shared = DoomCloudStore()
 
-    private let container = CKContainer(identifier: "iCloud.com.yourname.uzdoom")
-    private var db: CKDatabase { container.privateCloudDatabase }
+    // CloudKit needs a paid Apple Developer Program team. Creating a CKContainer
+    // without the iCloud entitlement crashes, so it only exists in builds with
+    // the UZ_ICLOUD compilation condition (plus UZDoomTV.entitlements).
+    #if UZ_ICLOUD
+    private let container: CKContainer? = CKContainer(identifier: "iCloud.com.mscproductions.uzdoomtv")
+    #else
+    private let container: CKContainer? = nil
+    #endif
+    private var db: CKDatabase { container!.privateCloudDatabase }
     private let zoneID = CKRecordZone.ID(zoneName: CloudSchema.zoneName,
                                          ownerName: CKCurrentUserDefaultName)
     private var zoneReady = false
@@ -87,6 +97,7 @@ actor DoomCloudStore {
 
     private func ensureZone() async throws {
         guard !zoneReady else { return }
+        guard let container else { throw DoomCloudError.iCloudDisabled }
         // Verify iCloud account before doing anything else.
         let status = try await container.accountStatus()
         guard status == .available else { throw DoomCloudError.notSignedIntoiCloud }
