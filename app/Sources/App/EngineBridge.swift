@@ -65,6 +65,9 @@ final class EngineBridge {
             print("[EngineBridge] Warning: MoltenVK not found at \(moltenVKPath)")
         }
         setenv("SDL_VULKAN_LIBRARY", moltenVKPath, 1)
+        // Test: the A12 (Apple TV 4K 2nd gen) only has tier-1 Metal argument
+        // buffers; bind resources directly while chasing the pink screen.
+        setenv("MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS", "0", 1)
 
         print("[EngineBridge] Launching UZDoom")
         print("  iwad:    \(iwad.path)")
