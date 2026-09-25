@@ -76,10 +76,9 @@ TNT.WAD, PLUTONIA.WAD) must never be committed; `.gitignore` covers `*.wad`.
 
 ## Signing / iCloud
 
-The project signs with team `YOURTEAMID`, a free Personal Team ("John
-mscproductions"). Personal Teams cannot use iCloud, so CloudKit sync is off:
-the target has no entitlements file and `DoomCloudStore` only creates its
-`CKContainer` when the `UZ_ICLOUD` compilation condition is set. Games come
-from the Freedoom download or the built-in upload page instead. With a paid
-Apple Developer Program team, add `UZ_ICLOUD` to Active Compilation
-Conditions and set Code Signing Entitlements to `UZDoomTV.entitlements`.
+iCloud (CloudKit save/WAD sync) needs the paid Apple Developer Program team;
+the free Personal Team (`YOURTEAMID`, shown as "mscproductions") cannot
+provision it. The target signs with `UZDoomTV.entitlements` and sets the
+`UZ_ICLOUD` compilation condition. To build with a Personal Team instead,
+clear Code Signing Entitlements and remove `UZ_ICLOUD`; `DoomCloudStore`
+then never creates a `CKContainer` (doing so without the entitlement crashes).
