@@ -29,7 +29,35 @@ To pair one, open **Settings → Remotes and Devices → Bluetooth** on the Appl
 - **Freedoom included**: Freedoom is a free, legal Doom-compatible game. If you have no game files, the app downloads it for you.
 - **Use your own Doom games**: add `DOOM.WAD`, `DOOM2.WAD`, `TNT.WAD`, `PLUTONIA.WAD` or mods (`.pk3`) that you own.
 - **Send files from your iPhone**: no cables needed; see [Adding your own games](#adding-your-own-games).
+- **Pauses properly** when you press the TV button to go back to the Home screen.
 - **iCloud sync** of games and saves between your devices. This needs a paid Apple developer account and is currently switched off in test builds.
+
+---
+
+## Controls
+
+Xbox, PlayStation and other MFi controllers all use the same layout:
+
+| Control | Action |
+|---|---|
+| Left stick | Move and strafe |
+| Right stick | Turn and look up/down |
+| Right trigger (RT / R2) | Fire |
+| Left trigger (LT / L2) | Alternate fire (some mods) |
+| A (✕ on PlayStation) | Use / open doors |
+| Y (△) | Jump |
+| Left / right bumper (LB/RB, L1/R1) | Previous / next weapon |
+| D-pad up | Automap |
+| D-pad down / left / right | Use / previous / next inventory item |
+| Left stick click | Crouch |
+| Menu (≡) | Game menu |
+| View / Options | Pause |
+
+B and X (○ and □) are free for you to assign.
+
+- **See and test it:** in the launcher, choose **Controls & Controller Test**. The layout lights up as you press each button or move a stick. Press B or Menu twice to leave.
+- **Change a button:** start a game and open **Options → Customize Controls**.
+- **Start over:** choose **Reset Controls to Default** in the launcher.
 
 ---
 
@@ -105,6 +133,7 @@ Then press **Run** in Xcode again.
 | Problem | What to do |
 |---|---|
 | The game list is greyed out | Connect a game controller (see [Why a controller is required](#why-a-controller-is-required)). |
+| Controls feel wrong or inverted | Choose **Reset Controls to Default** in the launcher, then start the game again. |
 | "Personal development teams … do not support the iCloud capability" | You're using a free Apple ID. The current test build already has iCloud switched off; run `git pull` to get it. |
 | "No XCFramework found … MoltenVK.xcframework" | The engine build hasn't finished. Run `./tvos/build-tvos.sh` from inside the `uzdoomtvos` folder. |
 | The build script stops with an error | It prints the name of a log file. Open it, or send the last lines with a bug report. |
@@ -118,7 +147,6 @@ For more build options (rebuilding single parts, custom settings), see [`tvos/RE
 
 - The UZDoom loading screen and the Freedoom title screen can look **pink**. Gameplay colours are fine.
 - No TestFlight or one-tap install yet; building on a Mac is currently the only way.
-- Going to the Home screen during a game and coming back is being fixed; the fix is in but not yet confirmed on a device.
 - iCloud sync is switched off in test builds until the paid developer team is set up.
 
 ---

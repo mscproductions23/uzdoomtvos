@@ -11,6 +11,7 @@
 		0A53BEC272D0EA2CF1C961F8 /* FreedoomInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD7EA96B2D536EE80F67B0CF /* FreedoomInstaller.swift */; };
 		2D398BE140B3ED53F8009C68 /* WadLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4AABA0EBE63FFB3FCF8E2E0 /* WadLibrary.swift */; };
 		2E90BA52500908944D0D6091 /* LauncherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0A037F517F14E16CA289BE /* LauncherView.swift */; };
+		5A7E00000000000000000011 /* ControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7E00000000000000000010 /* ControlsView.swift */; };
 		37C5E702300D1158002A4469 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 37C5E701300D1158002A4469 /* ZIPFoundation */; };
 		37C5E70F300D1C4D002A4469 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37C5E70E300D1C4D002A4469 /* SceneDelegate.swift */; };
 		37E57B82300CFEA300DC0C4C /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 37E57B81300CFEA300DC0C4C /* UIKit.framework */; };
@@ -72,6 +73,7 @@
 		6E43709F29D98F7EA1B46D2A /* .gitkeep */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitkeep; sourceTree = "<group>"; };
 		8A34229302684279AA453F73 /* EngineBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineBridge.swift; sourceTree = "<group>"; };
 		9B0A037F517F14E16CA289BE /* LauncherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherView.swift; sourceTree = "<group>"; };
+		5A7E00000000000000000010 /* ControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlsView.swift; sourceTree = "<group>"; };
 		BD7EA96B2D536EE80F67B0CF /* FreedoomInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreedoomInstaller.swift; sourceTree = "<group>"; };
 		D4AABA0EBE63FFB3FCF8E2E0 /* WadLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WadLibrary.swift; sourceTree = "<group>"; };
 		DF09EFE7843ACB9D0D2FFBC8 /* BeamServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BeamServer.swift; sourceTree = "<group>"; };
@@ -151,6 +153,7 @@
 				8A34229302684279AA453F73 /* EngineBridge.swift */,
 				BD7EA96B2D536EE80F67B0CF /* FreedoomInstaller.swift */,
 				9B0A037F517F14E16CA289BE /* LauncherView.swift */,
+				5A7E00000000000000000010 /* ControlsView.swift */,
 				231E9D443370E378C2761F11 /* UZDoomTVApp.swift */,
 				D4AABA0EBE63FFB3FCF8E2E0 /* WadLibrary.swift */,
 				37C5E70B300D1407002A4469 /* UZDoomTV-Bridging-Header.h */,
@@ -274,6 +277,7 @@
 				72604040CA538AC8E8CFCD3E /* EngineBridge.swift in Sources */,
 				0A53BEC272D0EA2CF1C961F8 /* FreedoomInstaller.swift in Sources */,
 				2E90BA52500908944D0D6091 /* LauncherView.swift in Sources */,
+				5A7E00000000000000000011 /* ControlsView.swift in Sources */,
 				FD7D4D18040CD704E0422DD0 /* UZDoomTVApp.swift in Sources */,
 				2D398BE140B3ED53F8009C68 /* WadLibrary.swift in Sources */,
 			);

@@ -4,6 +4,8 @@ import GameController
 struct LauncherView: View {
     @ObservedObject var library: WadLibrary
     @StateObject private var controllers = ControllerMonitor()
+    @State private var showResetConfirm = false
+    @State private var controlsMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -74,6 +76,26 @@ struct LauncherView: View {
                         Task { await library.installFreedoom() }
                     }
 
+                    Text("Controller").font(.title2).bold()
+
+                    NavigationLink("Controls & Controller Test") {
+                        ControlsView()
+                    }
+
+                    Button("Reset Controls to Default") {
+                        showResetConfirm = true
+                    }
+                    .confirmationDialog("Reset all controls to the default layout?",
+                                        isPresented: $showResetConfirm, titleVisibility: .visible) {
+                        Button("Reset", role: .destructive) { resetControls() }
+                        Button("Cancel", role: .cancel) {}
+                    }
+
+                    if let message = controlsMessage {
+                        Text(message).font(.callout).foregroundStyle(.secondary)
+                            .frame(maxWidth: 500, alignment: .leading)
+                    }
+
                     if let busy = library.busyMessage {
                         ProgressView(busy)
                     }
@@ -90,6 +112,16 @@ struct LauncherView: View {
                 }
             }
             .padding(60)
+        }
+    }
+
+    private func resetControls() {
+        do {
+            controlsMessage = try ControlConfig.resetToDefaults()
+                ? "Controls reset. The default layout applies next time you start a game."
+                : "Controls are already at their defaults."
+        } catch {
+            controlsMessage = "Couldn't reset controls: \(error.localizedDescription)"
         }
     }
 }
