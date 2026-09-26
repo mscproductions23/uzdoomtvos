@@ -167,6 +167,18 @@ final class BeamServer {
             // Sanitize: no path separators, known extensions only.
             let name = (rawName as NSString).lastPathComponent
             let ext = (name as NSString).pathExtension.lowercased()
+            if ext == "zip" {
+                do {
+                    let count = try Self.importZip(request.body)
+                    onFileReceived?()
+                    respond(connection, status: "200 OK", contentType: "text/plain; charset=utf-8",
+                            body: Data("restored \(count) file\(count == 1 ? "" : "s")".utf8))
+                } catch {
+                    respond(connection, status: "400 Bad Request", contentType: "text/plain; charset=utf-8",
+                            body: Data(error.localizedDescription.utf8))
+                }
+                return
+            }
             let destDir: URL?
             switch ext {
             case "wad", "pk3", "ipk3": destDir = DoomCloudStore.localWadDirectory
@@ -175,7 +187,7 @@ final class BeamServer {
             }
             guard let destDir, !name.isEmpty else {
                 respond(connection, status: "400 Bad Request", contentType: "text/plain",
-                        body: Data("Only .wad, .pk3, .ipk3 and .zds files are accepted.".utf8))
+                        body: Data("Only .wad, .pk3, .ipk3, .zds and .zip files are accepted.".utf8))
                 return
             }
             do {
@@ -318,6 +330,39 @@ final class BeamServer {
             }
     }
 
+    /// Unpacks a .zip (e.g. the "Download all saves" backup): .zds files go to the save folder,
+    /// .wad/.pk3/.ipk3 to the WAD folder, anything else is skipped. Folder structure inside the
+    /// zip is ignored (only file names are used), so entries can't escape the target folders.
+    /// Returns how many files were restored.
+    private static func importZip(_ data: Data) throws -> Int {
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("beam-upload-\(UUID().uuidString).zip")
+        try data.write(to: tempURL)
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let archive = try Archive(url: tempURL, accessMode: .read)
+        var count = 0
+        for entry in archive where entry.type == .file {
+            let name = (entry.path as NSString).lastPathComponent
+            if name.hasPrefix(".") || name.isEmpty { continue }   // skip macOS "._" metadata and hidden files
+            let destDir: URL
+            switch (name as NSString).pathExtension.lowercased() {
+            case "zds":                destDir = DoomCloudStore.localSaveDirectory
+            case "wad", "pk3", "ipk3": destDir = DoomCloudStore.localWadDirectory
+            default:                   continue
+            }
+            try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
+            let dest = destDir.appendingPathComponent(name)
+            try? FileManager.default.removeItem(at: dest)   // restoring replaces the file of the same name
+            _ = try archive.extract(entry, to: dest)
+            count += 1
+        }
+        guard count > 0 else {
+            throw NSError(domain: "BeamServer", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "That zip has no .zds saves or .wad/.pk3 games in it."])
+        }
+        return count
+    }
+
     private static let uploadPage = """
     <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     <title>UZDoom TV</title>
@@ -337,13 +382,13 @@ final class BeamServer {
     <p><a class="button" id="padlink" href="/pad">🎮 Use this phone as a controller</a></p>
 
     <h2>Send files to the Apple TV</h2>
-    <p>Pick .wad / .pk3 games or .zds saves:</p>
+    <p>Pick .wad / .pk3 games, .zds saves, or a saves backup (.zip):</p>
     <input type="file" id="files" multiple>
     <button onclick="send()">Send to Apple TV</button>
     <div id="log"></div>
 
     <h2>Back up your saves</h2>
-    <p class="hint">Download saves to this phone. To restore them later, send them back with the section above.</p>
+    <p class="hint">Download saves to this phone. To restore them, send the .zip (or single saves) back with the section above. No need to unzip.</p>
     <a class="button" id="all" href="/saves.zip">Download all saves (.zip)</a>
     <ul id="saves"><li class="meta">Loading…</li></ul>
 
@@ -357,7 +402,8 @@ final class BeamServer {
         log.textContent += `Sending ${f.name}… `;
         try {
           const r = await fetch(withKey('/upload/' + encodeURIComponent(f.name)), {method:'PUT', body:f});
-          log.textContent += r.ok ? 'done\\n' : `failed (${r.status})\\n`;
+          const msg = await r.text();
+          log.textContent += r.ok ? (msg === 'OK' ? 'done' : msg) + '\\n' : `failed (${r.status}): ${msg}\\n`;
         } catch(e){ log.textContent += 'failed: ' + e + '\\n'; }
       }
       log.textContent += 'All transfers finished.';
