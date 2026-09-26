@@ -382,10 +382,10 @@ index 7d55157..5dc7681 100644
  														   error:nil];
 diff --git a/src/common/platform/posix/sdl/i_gcjoystick.mm b/src/common/platform/posix/sdl/i_gcjoystick.mm
 new file mode 100644
-index 0000000..302aa11
+index 0000000..a0ef5ef
 --- /dev/null
 +++ b/src/common/platform/posix/sdl/i_gcjoystick.mm
-@@ -0,0 +1,689 @@
+@@ -0,0 +1,733 @@
 +// i_gcjoystick.mm: game controller input for tvOS via Apple's GameController framework. Part of UZDoom; see LICENSE for terms.
 +
 +#import <GameController/GameController.h>
@@ -395,6 +395,29 @@ index 0000000..302aa11
 +#include "cmdlib.h"
 +#include "d_eventbase.h"
 +#include <cmath>
++#include <mutex>
++
++// Touch pad from the iPhone Beam page (see BeamServer.swift). Written on the app's network
++// queue through uzdoom_set_touch_pad(), read on the main thread in ProcessInput().
++// axes: left X, left Y (+1 = up), right X, right Y (+1 = up), left trigger, right trigger (0..1).
++// buttons: same bit layout as FGCController::ProcessInput (bit N -> KEY_PAD_DPAD_UP + N).
++struct FTouchPadState
++{
++	float Axes[6];
++	uint32_t Buttons;
++	bool Connected;
++};
++static std::mutex TouchPadLock;
++static FTouchPadState TouchPad = {};
++
++extern "C" __attribute__((visibility("default"))) void uzdoom_set_touch_pad(const float *axes, unsigned int buttons, int connected)
++{
++	std::lock_guard<std::mutex> lock(TouchPadLock);
++	TouchPad.Connected = connected != 0;
++	for (int i = 0; i < 6; i++)
++		TouchPad.Axes[i] = (TouchPad.Connected && axes != nullptr) ? axes[i] : 0.f;
++	TouchPad.Buttons = TouchPad.Connected ? buttons : 0;
++}
 +
 +// MACROS ------------------------------------------------------------------
 +
@@ -555,6 +578,12 @@ index 0000000..302aa11
 +
 +void FGCController::ProcessInput()
 +{
++	FTouchPadState touch;
++	{
++		std::lock_guard<std::mutex> lock(TouchPadLock);
++		touch = TouchPad;
++	}
++
 +	@autoreleasepool
 +	{
 +		GCExtendedGamepad *pad = nil;
@@ -567,7 +596,7 @@ index 0000000..302aa11
 +			}
 +		}
 +
-+		if (pad == nil)
++		if (pad == nil && !touch.Connected)
 +		{
 +			if (Connected)
 +			{
@@ -586,31 +615,46 @@ index 0000000..302aa11
 +			return;
 +		}
 +
-+		// GameController gives -1..1 with +Y = up; negate Y for engine's +Y = down convention
-+		ProcessThumbstick(pad.leftThumbstick.xAxis.value, &Axes[AXIS_ThumbLX],
-+						 -pad.leftThumbstick.yAxis.value, &Axes[AXIS_ThumbLY], KEY_PAD_LTHUMB_RIGHT);
-+		ProcessThumbstick(pad.rightThumbstick.xAxis.value, &Axes[AXIS_ThumbRX],
-+						 -pad.rightThumbstick.yAxis.value, &Axes[AXIS_ThumbRY], KEY_PAD_RTHUMB_RIGHT);
-+		ProcessTrigger(pad.leftTrigger.value, &Axes[AXIS_LeftTrigger], KEY_PAD_LTRIGGER);
-+		ProcessTrigger(pad.rightTrigger.value, &Axes[AXIS_RightTrigger], KEY_PAD_RTRIGGER);
++		// Physical controller values (0 when none), plus the touch pad, clamped.
++		float lx = pad ? pad.leftThumbstick.xAxis.value : 0.f;
++		float ly = pad ? pad.leftThumbstick.yAxis.value : 0.f;
++		float rx = pad ? pad.rightThumbstick.xAxis.value : 0.f;
++		float ry = pad ? pad.rightThumbstick.yAxis.value : 0.f;
++		float lt = pad ? pad.leftTrigger.value : 0.f;
++		float rt = pad ? pad.rightTrigger.value : 0.f;
++		lx = clamp(lx + touch.Axes[0], -1.f, 1.f);
++		ly = clamp(ly + touch.Axes[1], -1.f, 1.f);
++		rx = clamp(rx + touch.Axes[2], -1.f, 1.f);
++		ry = clamp(ry + touch.Axes[3], -1.f, 1.f);
++		lt = clamp(lt + touch.Axes[4], 0.f, 1.f);
++		rt = clamp(rt + touch.Axes[5], 0.f, 1.f);
 +
-+		// Build button state using XInput bit layout
-+		int buttons = 0;
-+		if (pad.dpad.up.pressed)    buttons |= 1 << 0;
-+		if (pad.dpad.down.pressed)  buttons |= 1 << 1;
-+		if (pad.dpad.left.pressed)  buttons |= 1 << 2;
-+		if (pad.dpad.right.pressed) buttons |= 1 << 3;
-+		if (pad.buttonMenu.pressed) buttons |= 1 << 4;  // KEY_PAD_START
-+		if (pad.buttonOptions != nil && pad.buttonOptions.pressed) buttons |= 1 << 5;  // KEY_PAD_BACK
-+		if (pad.leftThumbstickButton != nil && pad.leftThumbstickButton.pressed) buttons |= 1 << 6;
-+		if (pad.rightThumbstickButton != nil && pad.rightThumbstickButton.pressed) buttons |= 1 << 7;
-+		if (pad.leftShoulder.pressed)  buttons |= 1 << 8;
-+		if (pad.rightShoulder.pressed) buttons |= 1 << 9;
-+		// bits 10 and 11 are the triggers (handled above via ProcessTrigger)
-+		if (pad.buttonA.pressed) buttons |= 1 << 12;
-+		if (pad.buttonB.pressed) buttons |= 1 << 13;
-+		if (pad.buttonX.pressed) buttons |= 1 << 14;
-+		if (pad.buttonY.pressed) buttons |= 1 << 15;
++		// GameController gives +Y = up; negate Y for engine's +Y = down convention
++		ProcessThumbstick(lx, &Axes[AXIS_ThumbLX], -ly, &Axes[AXIS_ThumbLY], KEY_PAD_LTHUMB_RIGHT);
++		ProcessThumbstick(rx, &Axes[AXIS_ThumbRX], -ry, &Axes[AXIS_ThumbRY], KEY_PAD_RTHUMB_RIGHT);
++		ProcessTrigger(lt, &Axes[AXIS_LeftTrigger], KEY_PAD_LTRIGGER);
++		ProcessTrigger(rt, &Axes[AXIS_RightTrigger], KEY_PAD_RTRIGGER);
++
++		int buttons = (int)(touch.Buttons & 0xF3FF);   // bits 10/11 are the triggers, handled above
++		if (pad != nil)
++		{
++			// Build button state using XInput bit layout
++			if (pad.dpad.up.pressed)    buttons |= 1 << 0;
++			if (pad.dpad.down.pressed)  buttons |= 1 << 1;
++			if (pad.dpad.left.pressed)  buttons |= 1 << 2;
++			if (pad.dpad.right.pressed) buttons |= 1 << 3;
++			if (pad.buttonMenu.pressed) buttons |= 1 << 4;  // KEY_PAD_START
++			if (pad.buttonOptions != nil && pad.buttonOptions.pressed) buttons |= 1 << 5;  // KEY_PAD_BACK
++			if (pad.leftThumbstickButton != nil && pad.leftThumbstickButton.pressed) buttons |= 1 << 6;
++			if (pad.rightThumbstickButton != nil && pad.rightThumbstickButton.pressed) buttons |= 1 << 7;
++			if (pad.leftShoulder.pressed)  buttons |= 1 << 8;
++			if (pad.rightShoulder.pressed) buttons |= 1 << 9;
++			// bits 10 and 11 are the triggers (handled above via ProcessTrigger)
++			if (pad.buttonA.pressed) buttons |= 1 << 12;
++			if (pad.buttonB.pressed) buttons |= 1 << 13;
++			if (pad.buttonX.pressed) buttons |= 1 << 14;
++			if (pad.buttonY.pressed) buttons |= 1 << 15;
++		}
 +
 +		Joy_GenerateButtonEvents(LastButtons, buttons, 16, KEY_PAD_DPAD_UP);
 +		LastButtons = buttons;

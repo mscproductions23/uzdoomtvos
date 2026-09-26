@@ -7,6 +7,10 @@ struct LauncherView: View {
     @StateObject private var controllers = ControllerMonitor()
     @State private var showResetConfirm = false
     @State private var controlsMessage: String?
+    @AppStorage(DoomCloudStore.syncEnabledKey) private var iCloudSync = true
+
+    /// A real game controller, or the iPhone controller page, is connected.
+    private var canPlay: Bool { controllers.hasGamepad || library.phonePadConnected }
 
     var body: some View {
         NavigationStack {
@@ -16,11 +20,11 @@ struct LauncherView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     Text("UZDoom").font(.largeTitle).bold()
 
-                    if !controllers.hasGamepad {
+                    if !canPlay {
                         VStack(alignment: .leading, spacing: 8) {
                             Label("Connect a game controller to play", systemImage: "gamecontroller")
                                 .font(.headline)
-                            Text("The Siri Remote doesn't have enough buttons for Doom. Pair an Xbox, PlayStation or MFi controller in Settings → Remotes and Devices → Bluetooth.")
+                            Text("The Siri Remote doesn't have enough buttons for Doom. Pair an Xbox, PlayStation or MFi controller in Settings → Remotes and Devices → Bluetooth, or use your iPhone: choose Connect iPhone… and tap Use this phone as a controller.")
                                 .font(.callout)
                                 .foregroundStyle(.secondary)
                         }
@@ -48,7 +52,7 @@ struct LauncherView: View {
                             }
                             .frame(maxWidth: 700, alignment: .leading)
                         }
-                        .disabled(!controllers.hasGamepad)
+                        .disabled(!canPlay)
                     }
                 }
 
@@ -56,7 +60,7 @@ struct LauncherView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     Text("Add Games & Saves").font(.title2).bold()
 
-                    Button(library.beamAddress == nil ? "Beam from iPhone…" : "Stop Receiving") {
+                    Button(library.beamAddress == nil ? "Connect iPhone…" : "Disconnect iPhone") {
                         library.toggleBeam()
                     }
 
@@ -74,15 +78,30 @@ struct LauncherView: View {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text("Scan with your iPhone camera")
                                     .font(.headline)
-                                Text("Your iPhone must be on the same Wi-Fi. Send games and saves, or back up your saves.")
+                                Text("Your iPhone must be on the same Wi-Fi. Send games and saves, back up your saves, or use the phone as a controller.")
                                     .foregroundStyle(.secondary)
-                                Text("Receiving stops by itself after 15 minutes.")
-                                    .foregroundStyle(.secondary)
+                                Text(library.phonePadConnected
+                                     ? "iPhone controller connected."
+                                     : "Disconnects by itself after 15 minutes unless the phone is being used as a controller.")
+                                    .foregroundStyle(library.phonePadConnected ? .green : .secondary)
                             }
                             .font(.callout)
                         }
                         .frame(maxWidth: 600, alignment: .leading)
                     }
+
+                    #if UZ_ICLOUD
+                    Toggle("iCloud Sync", isOn: $iCloudSync)
+                        .frame(maxWidth: 500)
+                        .onChange(of: iCloudSync) { _, _ in
+                            Task { await library.refresh() }
+                        }
+                    Text(iCloudSync
+                         ? "Saves and WADs sync through your iCloud account."
+                         : "Off: saves and WADs stay on this Apple TV.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    #endif
 
                     Button("Install Freedoom (free)") {
                         Task { await library.installFreedoom() }
@@ -119,7 +138,7 @@ struct LauncherView: View {
 
                     Spacer()
 
-                    Text("Saves stay on this Apple TV. Back them up with Beam from iPhone.\nCommercial WADs must be your own copies.")
+                    Text("Back up saves any time with Connect iPhone….\nCommercial WADs must be your own copies.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
             }

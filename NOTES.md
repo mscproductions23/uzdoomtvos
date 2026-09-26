@@ -101,13 +101,23 @@ TNT.WAD, PLUTONIA.WAD) must never be committed; `.gitignore` covers `*.wad`.
 
 ## Signing / iCloud
 
-Team `YOURTEAMID` ("mscproductions") is the paid Apple Developer Program team. The Mac has
-its Developer ID certificate, and its tvOS profiles last a year. The "Personal development
-teams do not support iCloud" error seen on 2026-09-25 happened while the membership had
-lapsed. iCloud is currently OFF (commit cd165bb removed `CODE_SIGN_ENTITLEMENTS` and
-`UZ_ICLOUD`). Reverting cd165bb turns it back on; `DEVELOPMENT_TEAM` is already correct.
+Team `YOURTEAMID` ("mscproductions") is the paid Apple Developer Program team. iCloud is ON:
+the target signs with `UZDoomTV.entitlements` (container `iCloud.com.mscproductions.uzdoomtv`)
+and sets `UZ_ICLOUD`. The launcher's **iCloud Sync** switch (`DoomCloudStore.syncEnabled`,
+UserDefaults `iCloudSyncEnabled`, default on) makes every cloud call report "disabled" when
+off. To build with a free team, clear Code Signing Entitlements and remove `UZ_ICLOUD`.
 Without `UZ_ICLOUD`, `DoomCloudStore` never creates a `CKContainer` (doing so without the
 entitlement crashes).
+
+## iPhone controller
+
+`PadPage.swift` is a touch gamepad page served at `/pad` (it needs the Beam key). It opens a
+WebSocket to port 8081 (`BeamServer`), sends the key as its first message, then sends JSON
+`{"a":[lx,ly,rx,ry,lt,rt],"b":bits}`. `BeamServer` passes this to the engine's exported
+`uzdoom_set_touch_pad()` (`i_gcjoystick.mm`), which merges it with any real controller using
+the same XInput-style layout, so the default pad bindings and menus just work. One phone at a
+time. A connected phone counts as a controller for the launcher's "controller required" check,
+and receiving doesn't auto-stop while it's connected.
 
 ## Saves
 

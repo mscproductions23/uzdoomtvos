@@ -13,12 +13,12 @@ This is a port of [UZDoom](https://github.com/UZDoom/UZDoom), a modern Doom engi
 | To play | To build it yourself |
 |---|---|
 | An Apple TV 4K with tvOS 17 or later (tested on Apple TV 4K, 2nd generation) | A Mac with **Xcode** installed (free from the Mac App Store) |
-| A **game controller**: Xbox, PlayStation or any "MFi" controller | **CMake** (`brew install cmake`) |
-| A Doom game file (Freedoom is free and downloads automatically) | An Apple ID (free works; a paid developer account is needed for iCloud) |
+| A **game controller** (Xbox, PlayStation or any "MFi" controller), or your **iPhone** as a touchscreen controller | **CMake** (`brew install cmake`) |
+| A Doom game file (Freedoom is free and downloads automatically) | An Apple ID (a free one works but has no iCloud sync; a paid developer account adds it) |
 
 ### Why a controller is required
 
-The Siri Remote has only a few buttons, which isn't enough for Doom (move, turn, fire, open doors, switch weapons…). The launcher won't start a game until a controller is connected.
+The Siri Remote has only a few buttons, which isn't enough for Doom (move, turn, fire, open doors, switch weapons…). The launcher won't start a game until a controller is connected. Your iPhone counts: see [iPhone as a controller](#iphone-as-a-controller).
 
 To pair one, open **Settings → Remotes and Devices → Bluetooth** on the Apple TV and put your controller in pairing mode.
 
@@ -30,7 +30,8 @@ To pair one, open **Settings → Remotes and Devices → Bluetooth** on the Appl
 - **Use your own Doom games**: add `DOOM.WAD`, `DOOM2.WAD`, `TNT.WAD`, `PLUTONIA.WAD` or mods (`.pk3`) that you own.
 - **Send files from your iPhone**: no cables needed; see [Adding your own games](#adding-your-own-games). The same page backs up your saves; see [Your saves](#your-saves).
 - **Pauses properly** when you press the TV button to go back to the Home screen.
-- **iCloud sync** of games and saves between your devices. This needs a paid Apple developer account and is currently switched off in test builds.
+- **iCloud sync** of games and saves between your devices, with an on/off switch in the launcher. Everything also works offline with it off.
+- **iPhone as a controller**: a touchscreen gamepad in Safari, no app needed.
 
 ---
 
@@ -59,17 +60,27 @@ B and X (○ and □) are free for you to assign.
 - **Change a button:** start a game and open **Options → Customize Controls**.
 - **Start over:** choose **Reset Controls to Default** in the launcher.
 
+### iPhone as a controller
+
+No controller? Use your iPhone:
+
+1. In the launcher, choose **Connect iPhone…** and scan the QR code (same Wi-Fi).
+2. Tap **🎮 Use this phone as a controller**, then turn the phone sideways.
+3. Left thumb moves (the stick appears wherever you touch), right thumb looks. The buttons are FIRE, USE and JUMP, plus Menu, Back, Map and weapon switching along the top.
+
+The phone keeps its screen on while connected, and the connection stays open as long as you're playing.
+
 ---
 
 ## Adding your own games
 
-1. In the launcher, choose **Beam from iPhone…**.
+1. In the launcher, choose **Connect iPhone…**.
 2. The TV shows a QR code. On your iPhone, on the **same Wi-Fi**, scan it with the Camera app and open the link.
 3. The page opens in Safari. The link contains a one-time key, so only someone who can see your TV can use it. Receiving switches itself off after 15 minutes.
 4. Pick your files:
    - `.wad`, `.pk3`, `.ipk3` go into your game library.
    - `.zds` files go into your saves.
-5. Choose **Stop Receiving** when you're done. Your games now appear in the list.
+5. Choose **Disconnect iPhone** when you're done. Your games now appear in the list.
 
 > **Please only use game files you own.** The commercial Doom games are not included and must never be uploaded to this repository.
 
@@ -79,11 +90,11 @@ B and X (○ and □) are free for you to assign.
 
 Saves are kept on the Apple TV. They survive updates, but **deleting the app erases them**, and tvOS may clear them if the Apple TV runs very low on storage. To back them up:
 
-1. In the launcher, choose **Beam from iPhone…** and scan the QR code with your iPhone (same Wi-Fi).
+1. In the launcher, choose **Connect iPhone…** and scan the QR code with your iPhone (same Wi-Fi).
 2. Under **Back up your saves**, tap a save to download it, or **Download all saves (.zip)**.
 3. To restore, open the same page and send the `.zds` files back with **Send to Apple TV**. (Unzip the backup first in the Files app.)
 
-iCloud save sync is built in and will be switched on in a later build.
+With **iCloud Sync** switched on in the launcher, saves also sync through your iCloud account: they download when you start a game and upload when you leave the app. Switch it off to keep everything on the Apple TV only.
 
 ---
 
@@ -144,9 +155,9 @@ Then press **Run** in Xcode again.
 
 | Problem | What to do |
 |---|---|
-| The game list is greyed out | Connect a game controller (see [Why a controller is required](#why-a-controller-is-required)). |
+| The game list is greyed out | Connect a game controller, or connect your iPhone as one (see [Why a controller is required](#why-a-controller-is-required)). |
 | Controls feel wrong or inverted | Choose **Reset Controls to Default** in the launcher, then start the game again. |
-| "Personal development teams … do not support the iCloud capability" | You're using a free Apple ID. The current test build already has iCloud switched off; run `git pull` to get it. |
+| "Personal development teams … do not support the iCloud capability" | Your Apple ID has no paid developer membership (or it lapsed). Either renew it, or in Xcode clear **Code Signing Entitlements** and remove `UZ_ICLOUD` from **Active Compilation Conditions** to build without iCloud. |
 | "No XCFramework found … MoltenVK.xcframework" | The engine build hasn't finished. Run `./tvos/build-tvos.sh` from inside the `uzdoomtvos` folder. |
 | The build script stops with an error | It prints the name of a log file. Open it, or send the last lines with a bug report. |
 | Frame drops or stutter | Running from Xcode slows the game down (debugger attached). For real performance, stop it in Xcode and open UZDoom from the Apple TV Home screen. Some stutter the first time new effects appear is shaders compiling; this gets better on later runs. |
@@ -163,7 +174,6 @@ For more build options (rebuilding single parts, custom settings), see [`tvos/RE
 - **Striped status-bar border with "classic" border scaling.** The pattern beside the status bar breaks up into stripes. New installs use the non-classic scaling, which draws correctly.
 - The pink title screen (a UZDoom bug on Apple GPUs, [UZDoom#1116](https://github.com/UZDoom/UZDoom/issues/1116)) is fixed by a workaround in this build.
 - No TestFlight or one-tap install yet; building on a Mac is currently the only way.
-- iCloud sync is switched off in test builds until the paid developer team is set up.
 
 ---
 
