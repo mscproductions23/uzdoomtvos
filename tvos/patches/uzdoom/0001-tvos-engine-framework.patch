@@ -127,6 +127,62 @@ index 67f85c7..91e8f8b 100644
  	if (!module)
  		module = dlopen("libvulkan.1.dylib", RTLD_NOW | RTLD_LOCAL);
  	if (!module)
+diff --git a/libraries/ZVulkan/src/vulkanbuilders.cpp b/libraries/ZVulkan/src/vulkanbuilders.cpp
+index be18a86..986f177 100644
+--- a/libraries/ZVulkan/src/vulkanbuilders.cpp
++++ b/libraries/ZVulkan/src/vulkanbuilders.cpp
+@@ -449,12 +449,36 @@ bool ImageBuilder::IsFormatSupported(VulkanDevice* device, VkFormatFeatureFlags
+ 	return true;
+ }
+ 
++#ifdef UZ_TVOS
++// MoltenVK 1.2.7+ only gives a Metal texture MTLTextureUsagePixelFormatView when the
++// image is created with MUTABLE_FORMAT (and is sampled/rendered). Without it, the
++// title screen and menus come out with scrambled colour channels on Apple GPUs
++// (pink or green; UZDoom issue #1116, MoltenVK issue #2220). Restore the old
++// behaviour for every colour image.
++static VkImageCreateInfo ApplePixelFormatViewWorkaround(VkImageCreateInfo info)
++{
++	bool isDepthStencil = info.format >= VK_FORMAT_D16_UNORM && info.format <= VK_FORMAT_D32_SFLOAT_S8_UINT;
++	if (!isDepthStencil)
++	{
++		info.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
++		if (info.usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
++			info.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
++	}
++	return info;
++}
++#endif
++
+ std::unique_ptr<VulkanImage> ImageBuilder::Create(VulkanDevice* device, VkDeviceSize* allocatedBytes)
+ {
+ 	VkImage image;
+ 	VmaAllocation allocation;
+ 
+-	VkResult result = vmaCreateImage(device->allocator, &imageInfo, &allocInfo, &image, &allocation, nullptr);
++#ifdef UZ_TVOS
++	VkImageCreateInfo createInfo = ApplePixelFormatViewWorkaround(imageInfo);
++#else
++	const VkImageCreateInfo& createInfo = imageInfo;
++#endif
++	VkResult result = vmaCreateImage(device->allocator, &createInfo, &allocInfo, &image, &allocation, nullptr);
+ 	CheckVulkanError(result, "Could not create vulkan image");
+ 
+ 	if (allocatedBytes != nullptr)
+@@ -476,7 +500,12 @@ std::unique_ptr<VulkanImage> ImageBuilder::TryCreate(VulkanDevice* device)
+ 	VkImage image;
+ 	VmaAllocation allocation;
+ 
+-	VkResult result = vmaCreateImage(device->allocator, &imageInfo, &allocInfo, &image, &allocation, nullptr);
++#ifdef UZ_TVOS
++	VkImageCreateInfo createInfo = ApplePixelFormatViewWorkaround(imageInfo);
++#else
++	const VkImageCreateInfo& createInfo = imageInfo;
++#endif
++	VkResult result = vmaCreateImage(device->allocator, &createInfo, &allocInfo, &image, &allocation, nullptr);
+ 	if (result != VK_SUCCESS)
+ 		return nullptr;
+ 
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
 index d5e8955..934ac83 100644
 --- a/src/CMakeLists.txt
