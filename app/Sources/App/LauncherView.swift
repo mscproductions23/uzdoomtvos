@@ -1,5 +1,6 @@
 import SwiftUI
 import GameController
+import CoreImage.CIFilterBuiltins
 
 struct LauncherView: View {
     @ObservedObject var library: WadLibrary
@@ -60,16 +61,27 @@ struct LauncherView: View {
                     }
 
                     if let address = library.beamAddress {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("On your iPhone (same Wi-Fi), open Safari and go to:")
-                            Text(address)
-                                .font(.system(.title3, design: .monospaced))
-                                .bold()
-                            Text("Then pick your .wad and save files.")
-                                .foregroundStyle(.secondary)
+                        // The link carries a one-time key, so it's shown as a QR code rather than text.
+                        HStack(alignment: .top, spacing: 24) {
+                            if let qr = QRCode.image(for: address) {
+                                Image(uiImage: qr)
+                                    .interpolation(.none)
+                                    .resizable()
+                                    .frame(width: 220, height: 220)
+                                    .padding(12)
+                                    .background(Color.white, in: RoundedRectangle(cornerRadius: 12))
+                            }
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Scan with your iPhone camera")
+                                    .font(.headline)
+                                Text("Your iPhone must be on the same Wi-Fi. Send games and saves, or back up your saves.")
+                                    .foregroundStyle(.secondary)
+                                Text("Receiving stops by itself after 15 minutes.")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .font(.callout)
                         }
-                        .font(.callout)
-                        .frame(maxWidth: 500, alignment: .leading)
+                        .frame(maxWidth: 600, alignment: .leading)
                     }
 
                     Button("Install Freedoom (free)") {
@@ -107,7 +119,7 @@ struct LauncherView: View {
 
                     Spacer()
 
-                    Text("WADs and saves sync through your iCloud account.\nCommercial WADs must be your own copies.")
+                    Text("Saves stay on this Apple TV. Back them up with Beam from iPhone.\nCommercial WADs must be your own copies.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
             }
@@ -147,5 +159,17 @@ final class ControllerMonitor: ObservableObject {
     /// The Siri Remote only has a microGamepad profile; real controllers have extendedGamepad.
     nonisolated static func gamepadConnected() -> Bool {
         GCController.controllers().contains { $0.extendedGamepad != nil }
+    }
+}
+
+/// Renders a string as a QR code image (scale it up with `.interpolation(.none)`).
+enum QRCode {
+    static func image(for string: String) -> UIImage? {
+        let filter = CIFilter.qrCodeGenerator()
+        filter.message = Data(string.utf8)
+        filter.correctionLevel = "M"
+        guard let output = filter.outputImage,
+              let cgImage = CIContext().createCGImage(output, from: output.extent) else { return nil }
+        return UIImage(cgImage: cgImage)
     }
 }

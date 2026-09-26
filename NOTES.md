@@ -114,6 +114,6 @@ entitlement crashes).
 The engine gets `-savedir <Caches>/saves` and writes `.zds` files straight into it, with no
 per-game subfolder. tvOS has no permanent local storage: Caches survive reinstalling over
 the app, but not deleting it, and the system may purge them when storage is low. Backups:
-- the Beam page (`BeamServer`, port 8080) lists saves and serves `/saves/<name>` and
+- the Beam page (`BeamServer`, port 8080; every request needs the random per-session `?key=` from the QR code; auto-stops after 15 min) lists saves and serves `/saves/<name>` and
   `/saves.zip` for download, and still accepts `.zds` uploads to restore them;
 - iCloud sync in `DoomCloudStore` (down on launch, up on background) once iCloud is on.
