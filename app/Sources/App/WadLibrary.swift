@@ -24,6 +24,7 @@ final class WadLibrary: ObservableObject {
     }
 
     private let beamServer = BeamServer()
+    private var beamTimeout: Task<Void, Never>?
 
     private static let knownIwads: [String: String] = [
         "DOOM.WAD": "The Ultimate DOOM",
@@ -121,6 +122,8 @@ final class WadLibrary: ObservableObject {
         if beamAddress != nil {
             beamServer.stop()
             beamAddress = nil
+            beamTimeout?.cancel()
+            beamTimeout = nil
             Task { await refresh() }
         } else {
             do {
@@ -128,6 +131,12 @@ final class WadLibrary: ObservableObject {
                     Task { await self?.refresh() }
                 }
                 beamAddress = address
+                beamTimeout?.cancel()
+                beamTimeout = Task { [weak self] in
+                    try? await Task.sleep(for: .seconds(15 * 60))   // don't leave the receiver open by accident
+                    guard !Task.isCancelled, let self, self.beamAddress != nil else { return }
+                    self.toggleBeam()
+                }
             } catch {
                 lastError = "Could not start receiver: \(error.localizedDescription)"
             }

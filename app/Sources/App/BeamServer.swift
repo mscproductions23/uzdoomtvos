@@ -16,18 +16,22 @@ final class BeamServer {
     private var connections: [ObjectIdentifier: NWConnection] = [:]
     private var onFileReceived: (() -> Void)?
     private let queue = DispatchQueue(label: "beam-server")
+    private var accessKey = ""
 
-    /// Starts the server; returns the URL to show on screen, e.g. "http://192.168.1.40:8080"
+    /// Starts the server; returns the URL to show on screen, e.g. "http://192.168.1.40:8080/?key=…"
     func start(onFileReceived: @escaping () -> Void) throws -> String {
         self.onFileReceived = onFileReceived
         let listener = try NWListener(using: .tcp, on: 8080)
         listener.newConnectionHandler = { [weak self] connection in
             self?.accept(connection)
         }
+        var rng = SystemRandomNumberGenerator()
+        let key = (0..<16).map { _ in String(format: "%02x", UInt8.random(in: 0...255, using: &rng)) }.joined()
+        queue.sync { accessKey = key }   // requests read accessKey on `queue`
         listener.start(queue: queue)
         self.listener = listener
         let ip = Self.localIPAddress() ?? "<this-apple-tv's-IP>"
-        return "http://\(ip):8080"
+        return "http://\(ip):8080/?key=\(key)"
     }
 
     func stop() {
@@ -35,6 +39,7 @@ final class BeamServer {
         listener = nil
         connections.values.forEach { $0.cancel() }
         connections.removeAll()
+        queue.sync { accessKey = "" }
     }
 
     // MARK: Connection handling
@@ -62,7 +67,15 @@ final class BeamServer {
     }
 
     private func handle(_ request: HTTPRequest, on connection: NWConnection) {
-        let path = request.path.components(separatedBy: "?")[0]
+        let parts = request.path.split(separator: "?", maxSplits: 1).map(String.init)
+        let path = parts.first ?? "/"
+        let query = parts.count > 1 ? parts[1] : ""
+        let key = URLComponents(string: "/?" + query)?.queryItems?.first { $0.name == "key" }?.value ?? ""
+        guard !accessKey.isEmpty, Self.constantTimeEquals(key, accessKey) else {
+            respond(connection, status: "403 Forbidden", contentType: "text/html; charset=utf-8",
+                    body: Data(Self.expiredPage.utf8))
+            return
+        }
         switch (request.method, path) {
         case ("GET", "/"):
             respond(connection, status: "200 OK", contentType: "text/html", body: Data(Self.uploadPage.utf8))
@@ -185,6 +198,24 @@ final class BeamServer {
         return address
     }
 
+    /// Compares without returning early, so response timing doesn't reveal how much of a key matched.
+    private static func constantTimeEquals(_ a: String, _ b: String) -> Bool {
+        let x = Array(a.utf8), y = Array(b.utf8)
+        guard x.count == y.count else { return false }
+        var diff: UInt8 = 0
+        for i in 0..<x.count { diff |= x[i] ^ y[i] }
+        return diff == 0
+    }
+
+    private static let expiredPage = """
+    <!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>UZDoom TV</title>
+    <style>body{font-family:-apple-system,sans-serif;margin:1.5rem;background:#111;color:#eee}h1{color:#e33}</style>
+    </head><body><h1>Link expired</h1>
+    <p>On the Apple TV, choose <b>Beam from iPhone…</b> and scan the new QR code.</p>
+    </body></html>
+    """
+
     /// The .zds save files in the save folder, newest first.
     private static func saveFiles() -> [URL] {
         let dir = DoomCloudStore.localSaveDirectory
@@ -228,12 +259,14 @@ final class BeamServer {
     <ul id="saves"><li class="meta">Loading…</li></ul>
 
     <script>
+    const KEY = new URLSearchParams(location.search).get('key') || '';
+    const withKey = (p) => p + '?key=' + encodeURIComponent(KEY);
     async function send(){
       const log = document.getElementById('log');
       for (const f of document.getElementById('files').files){
         log.textContent += `Sending ${f.name}… `;
         try {
-          const r = await fetch('/upload/' + encodeURIComponent(f.name), {method:'PUT', body:f});
+          const r = await fetch(withKey('/upload/' + encodeURIComponent(f.name)), {method:'PUT', body:f});
           log.textContent += r.ok ? 'done\\n' : `failed (${r.status})\\n`;
         } catch(e){ log.textContent += 'failed: ' + e + '\\n'; }
       }
@@ -243,14 +276,15 @@ final class BeamServer {
     async function loadSaves(){
       const list = document.getElementById('saves');
       try {
-        const saves = await (await fetch('/saves.json')).json();
+        const saves = await (await fetch(withKey('/saves.json'))).json();
+        document.getElementById('all').href = withKey('/saves.zip');
         document.getElementById('all').style.display = saves.length ? '' : 'none';
         if (!saves.length){ list.innerHTML = '<li class="meta">No saves on the Apple TV yet.</li>'; return; }
         list.innerHTML = '';
         for (const s of saves){
           const li = document.createElement('li');
           const a = document.createElement('a');
-          a.href = '/saves/' + encodeURIComponent(s.name);
+          a.href = withKey('/saves/' + encodeURIComponent(s.name));
           a.textContent = s.name;
           a.setAttribute('download', s.name);
           const meta = document.createElement('span');

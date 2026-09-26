@@ -64,8 +64,8 @@ B and X (○ and □) are free for you to assign.
 ## Adding your own games
 
 1. In the launcher, choose **Beam from iPhone…**.
-2. The TV shows an address like `http://192.168.1.40:8080`.
-3. On your iPhone, on the **same Wi-Fi**, open that address in Safari.
+2. The TV shows a QR code. On your iPhone, on the **same Wi-Fi**, scan it with the Camera app and open the link.
+3. The page opens in Safari. The link contains a one-time key, so only someone who can see your TV can use it. Receiving switches itself off after 15 minutes.
 4. Pick your files:
    - `.wad`, `.pk3`, `.ipk3` go into your game library.
    - `.zds` files go into your saves.
@@ -79,7 +79,7 @@ B and X (○ and □) are free for you to assign.
 
 Saves are kept on the Apple TV. They survive updates, but **deleting the app erases them**, and tvOS may clear them if the Apple TV runs very low on storage. To back them up:
 
-1. In the launcher, choose **Beam from iPhone…** and open the address on your iPhone (same Wi-Fi).
+1. In the launcher, choose **Beam from iPhone…** and scan the QR code with your iPhone (same Wi-Fi).
 2. Under **Back up your saves**, tap a save to download it, or **Download all saves (.zip)**.
 3. To restore, open the same page and send the `.zds` files back with **Send to Apple TV**. (Unzip the backup first in the Files app.)
 
