@@ -1,10 +1,30 @@
-# UZDoom for Apple TV
+<p align="center">
+  <img src="docs/images/banner.png" alt="UZDoom for Apple TV" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/tvOS-17%2B-000000?logo=apple&logoColor=white" alt="tvOS 17+">
+  <img src="https://img.shields.io/badge/Apple%20TV-4K-22e2f8" alt="Apple TV 4K">
+  <img src="https://img.shields.io/badge/UZDoom-4.14.3-1f7784" alt="UZDoom 4.14.3">
+  <img src="https://img.shields.io/badge/60%20fps-1080p-2ea44f" alt="60 fps at 1080p">
+  <img src="https://img.shields.io/badge/status-early%20testing-orange" alt="Status: early testing">
+  <img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License: GPL-3.0">
+</p>
+
+<p align="center">
+  <b><a href="#features">Features</a></b> ·
+  <b><a href="#controls">Controls</a></b> ·
+  <b><a href="#building-and-installing-mac">Install</a></b> ·
+  <b><a href="#your-saves">Saves</a></b> ·
+  <b><a href="#troubleshooting">Troubleshooting</a></b>
+</p>
 
 Play classic Doom on your Apple TV with a game controller, or with your iPhone as a touchscreen controller.
 
 This is a port of [UZDoom](https://github.com/UZDoom/UZDoom), a modern Doom engine, to tvOS. It comes with a simple launcher: pick a game, press play, and you're in.
 
-> **Status: early testing.** The game runs at 60 fps on a real Apple TV 4K, with working graphics, sound, saves and controls. Some rough edges remain; see [Known issues](#known-issues). There is no one-tap install yet. For now you build it yourself on a Mac (steps below). A TestFlight link is planned.
+> [!NOTE]
+> **Early testing.** The game runs at 60 fps on a real Apple TV 4K, with working graphics, sound, saves and controls. Some rough edges remain; see [Known issues](#known-issues). There is no one-tap install yet. For now you build it yourself on a Mac (steps below). A TestFlight link is planned.
 
 ---
 
@@ -26,13 +46,17 @@ To pair one, open **Settings → Remotes and Devices → Bluetooth** on the Appl
 
 ## Features
 
-- **Freedoom included**: Freedoom is a free, legal Doom-compatible game. If you have no game files, the app downloads it for you.
-- **Use your own Doom games**: add `DOOM.WAD`, `DOOM2.WAD`, `TNT.WAD`, `PLUTONIA.WAD` or mods (`.pk3`) that you own.
-- **Send files from your iPhone**: no cables needed; see [Adding your own games](#adding-your-own-games). The same page backs up your saves; see [Your saves](#your-saves).
-- **Pauses properly** when you press the TV button to go back to the Home screen.
-- **iCloud sync** of games and saves between your devices. It's off by default; switch it on in the launcher. Everything works offline without it.
-- **iPhone as a controller**: a touchscreen gamepad in Safari, no app needed.
-- **Tuned for Apple TV**: new installs start with settings that hold 60 fps. Your own changes are saved automatically.
+| | Feature | |
+|:---:|---|---|
+| 🎮 | **Any controller** | Xbox, PlayStation, Switch Pro and other MFi controllers, with one standard layout |
+| 🎯 | **Gyro & touchpad aim** | Aim by tilting the controller (DualShock 4, DualSense, Switch Pro) or swiping the touchpad |
+| 📱 | **iPhone as a controller** | A touchscreen gamepad in Safari, no app needed |
+| 🆓 | **Freedoom included** | A free, legal Doom-compatible game, downloaded for you if you have no game files |
+| 💾 | **Your own games** | `DOOM.WAD`, `DOOM2.WAD`, `TNT.WAD`, `PLUTONIA.WAD` or `.pk3` mods that you own |
+| 📤 | **Send files from your iPhone** | No cables; the same page backs up and restores your saves ([Your saves](#your-saves)) |
+| ☁️ | **iCloud sync** | Games and saves in your own iCloud. Off by default; everything works offline |
+| ⚡ | **Tuned for Apple TV** | New installs start with settings that hold 60 fps; your changes are saved automatically |
+| ⏸️ | **Pauses properly** | Press the TV button any time and pick up where you left off |
 
 ---
 
@@ -235,7 +259,7 @@ More technical background is in [`NOTES.md`](NOTES.md).
 ## Credits and license
 
 - **UZDoom** and the GZDoom/ZDoom teams: the engine. Licensed under the GNU GPL v3.
-- **UZDoom logo** © 2025 The UZDoom Team, licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). The app icon, Top Shelf images and launcher logo are adapted from it (recoloured background, resized) and are shared under the same license.
+- **UZDoom logo** © 2025 The UZDoom Team, licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). The app icon, Top Shelf images, launcher logo and the banner at the top of this page are adapted from it (new background, resized, title text added) and are shared under the same license. The banner text uses Noto Sans (SIL Open Font License).
 - **Freedoom**: free game content, BSD licence.
 - **SDL**, **ZMusic**, **OpenAL Soft**, **libvpx**, **MoltenVK**: libraries used by the engine, each under its own licence.
 
