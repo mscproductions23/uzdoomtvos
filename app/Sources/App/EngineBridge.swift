@@ -31,6 +31,7 @@ final class EngineBridge {
 
         [GlobalSettings]
         use_joystick=true
+        cl_run=true
         vid_rendermode=0
         vid_scalemode=5
         vid_scale_customwidth=1920
@@ -48,6 +49,19 @@ final class EngineBridge {
         r_skymode=0
 
         """
+
+    /// One-time changes to configs written by older builds. Each runs once, so the player
+    /// can change the setting back afterwards.
+    private static func migrateConfig(at url: URL) {
+        let key = "configMigration.alwaysRun"
+        guard !UserDefaults.standard.bool(forKey: key),
+              var text = try? String(contentsOf: url, encoding: .utf8) else { return }
+        // Always run on by default (cl_run lives in [GlobalSettings]).
+        text = text.replacingOccurrences(of: "\ncl_run=false\n", with: "\ncl_run=true\n")
+        if (try? text.write(to: url, atomically: true, encoding: .utf8)) != nil {
+            UserDefaults.standard.set(true, forKey: key)
+        }
+    }
 
     func launch(iwad: URL, saveDirectory: URL) {
         guard !isRunning else { return }
@@ -72,6 +86,8 @@ final class EngineBridge {
         // The engine adds everything else and saves the result.
         if !FileManager.default.fileExists(atPath: configURL.path) {
             try? Self.starterConfig.write(to: configURL, atomically: true, encoding: .utf8)
+        } else {
+            Self.migrateConfig(at: configURL)
         }
 
         // Get log file path in Caches directory.
@@ -91,9 +107,6 @@ final class EngineBridge {
             "+use_joystick",      "1",   // a controller is required; older configs saved it off
             "+logfile", logFilePath,
         ]
-        #if DEBUG
-        args += ["+vid_fps", "1"]   // frame-rate counter in test builds run from Xcode
-        #endif
 
         // Set SDL_VULKAN_LIBRARY to embedded MoltenVK so both SDL and engine use it.
         let moltenVKPath = bundle.privateFrameworksURL!.appendingPathComponent("MoltenVK.framework/MoltenVK").path
