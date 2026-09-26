@@ -8,7 +8,7 @@ struct LauncherView: View {
     @StateObject private var controllers = ControllerMonitor()
     @State private var showResetConfirm = false
     @State private var controlsMessage: String?
-    @AppStorage(DoomCloudStore.syncEnabledKey) private var iCloudSync = true
+    @AppStorage(DoomCloudStore.syncEnabledKey) private var iCloudSync = false
     @State private var iCloudState: DoomCloudStore.AccountState = .unknown
     @Environment(\.scenePhase) private var scenePhase
 

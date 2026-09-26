@@ -104,7 +104,7 @@ TNT.WAD, PLUTONIA.WAD) must never be committed; `.gitignore` covers `*.wad`.
 The project's `DEVELOPMENT_TEAM` is a paid Apple Developer Program team. iCloud is ON:
 the target signs with `UZDoomTV.entitlements` (the container ID is there and in `DoomCloudStore.swift`)
 and sets `UZ_ICLOUD`. The launcher's **iCloud Sync** switch (`DoomCloudStore.syncEnabled`,
-UserDefaults `iCloudSyncEnabled`, default on) makes every cloud call report "disabled" when
+UserDefaults `iCloudSyncEnabled`, default off) makes every cloud call report "disabled" when
 off. Data goes to the private database of the iCloud account signed in on the
 Apple TV; the launcher shows its status (`DoomCloudStore.accountState()`, rechecked on
 `.CKAccountChanged` and when the app becomes active). To build with a free team, clear Code Signing Entitlements and remove `UZ_ICLOUD`.
