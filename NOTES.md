@@ -101,15 +101,20 @@ TNT.WAD, PLUTONIA.WAD) must never be committed; `.gitignore` covers `*.wad`.
 
 ## Signing / iCloud
 
-The project's `DEVELOPMENT_TEAM` is a paid Apple Developer Program team. iCloud is ON:
-the target signs with `UZDoomTV.entitlements` (the container ID is there and in `DoomCloudStore.swift`)
-and sets `UZ_ICLOUD`. The launcher's **iCloud Sync** switch (`DoomCloudStore.syncEnabled`,
-UserDefaults `iCloudSyncEnabled`, default off) makes every cloud call report "disabled" when
-off. Data goes to the private database of the iCloud account signed in on the
-Apple TV; the launcher shows its status (`DoomCloudStore.accountState()`, rechecked on
-`.CKAccountChanged` and when the app becomes active). To build with a free team, clear Code Signing Entitlements and remove `UZ_ICLOUD`.
-Without `UZ_ICLOUD`, `DoomCloudStore` never creates a `CKContainer` (doing so without the
-entitlement crashes).
+Signing settings live in xcconfig files, not in the project. `app/Config/Base.xcconfig` (in git)
+sets the default bundle ID, no team, and iCloud off, then includes `app/Config/Local.xcconfig`
+(git-ignored, written by `tvos/install.sh --team …`, template in `Local.xcconfig.example`),
+which sets `DEVELOPMENT_TEAM`, `UZ_BUNDLE_ID` and, to turn iCloud on,
+`UZ_ENTITLEMENTS = UZDoomTV.entitlements` and `UZ_EXTRA_CONDITIONS = UZ_ICLOUD`. The iCloud
+container is `iCloud.$(UZ_BUNDLE_ID)` (`UZ_ICLOUD_CONTAINER`). It reaches the entitlements file
+and, through Info.plist (`UZICloudContainer`), `DoomCloudStore`.
+
+The launcher's **iCloud Sync** switch (`DoomCloudStore.syncEnabled`, UserDefaults
+`iCloudSyncEnabled`, default off) makes every cloud call report "disabled" when off. Data goes
+to the private database of the iCloud account signed in on the Apple TV; the launcher shows its
+status (`DoomCloudStore.accountState()`, rechecked on `.CKAccountChanged` and when the app
+becomes active). Without `UZ_ICLOUD`, `DoomCloudStore` never creates a `CKContainer` (doing so
+without the entitlement crashes).
 
 ## iPhone controller
 

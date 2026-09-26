@@ -7,14 +7,15 @@
   <img src="https://img.shields.io/badge/Apple%20TV-4K-22e2f8" alt="Apple TV 4K">
   <img src="https://img.shields.io/badge/UZDoom-4.14.3-1f7784" alt="UZDoom 4.14.3">
   <img src="https://img.shields.io/badge/60%20fps-1080p-2ea44f" alt="60 fps at 1080p">
-  <img src="https://img.shields.io/badge/status-early%20testing-orange" alt="Status: early testing">
+  <img src="https://img.shields.io/badge/version-0.5.0-orange" alt="Version 0.5.0">
+  <img src="https://img.shields.io/badge/install-sideload-8a2be2" alt="Install: sideload">
   <img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License: GPL-3.0">
 </p>
 
 <p align="center">
   <b><a href="#features">Features</a></b> ·
   <b><a href="#controls">Controls</a></b> ·
-  <b><a href="#building-and-installing-mac">Install</a></b> ·
+  <b><a href="#installing-sideloading">Install</a></b> ·
   <b><a href="#your-saves">Saves</a></b> ·
   <b><a href="#troubleshooting">Troubleshooting</a></b>
 </p>
@@ -24,7 +25,7 @@ Play classic Doom on your Apple TV with a game controller, or with your iPhone a
 This is a port of [UZDoom](https://github.com/UZDoom/UZDoom), a modern Doom engine, to tvOS. It comes with a simple launcher: pick a game, press play, and you're in.
 
 > [!NOTE]
-> **Early testing.** The game runs at 60 fps on a real Apple TV 4K, with working graphics, sound, saves and controls. Some rough edges remain; see [Known issues](#known-issues). There is no one-tap install yet. For now you build it yourself on a Mac (steps below). A TestFlight link is planned.
+> **Version 0.5: a testing release.** The game runs at 60 fps on an Apple TV 4K (2nd generation), with working graphics, sound, saves and controls. Some rough edges remain; see [Known issues](#known-issues). It isn't on the App Store or TestFlight: you install it yourself from a Mac, signed with your own Apple ID ([how](#installing-sideloading)). Testing on other Apple TV models is very welcome; see [Testing wanted](#testing-wanted).
 
 ---
 
@@ -32,9 +33,9 @@ This is a port of [UZDoom](https://github.com/UZDoom/UZDoom), a modern Doom engi
 
 | To play | To build it yourself |
 |---|---|
-| An Apple TV 4K with tvOS 17 or later (tested on Apple TV 4K, 2nd generation) | A Mac with **Xcode** installed (free from the Mac App Store) |
+| An Apple TV with tvOS 17 or later. Tested on Apple TV 4K (2nd generation); other models are [untested](#testing-wanted) | A Mac with **Xcode** installed (free from the Mac App Store) |
 | A **game controller** (Xbox, PlayStation or any "MFi" controller), or your **iPhone** as a touchscreen controller | **CMake** (`brew install cmake`) |
-| A Doom game file (Freedoom is free and downloads automatically) | An Apple ID (a free one works but has no iCloud sync; a paid developer account adds it) |
+| A Doom game file (Freedoom is free and downloads automatically) | An Apple ID. A free one works; see [Free or paid Apple ID](#free-or-paid-apple-id) |
 
 ### Why a controller is required
 
@@ -160,57 +161,68 @@ Change anything in the game's **Options** menu. Your settings are saved automati
 
 ---
 
-## Building and installing (Mac)
+## Installing (sideloading)
 
-Allow about 30–40 minutes the first time, mostly waiting.
+UZDoom for Apple TV isn't on the App Store or TestFlight. You build it on a Mac and install it on your Apple TV yourself, signed with your own Apple ID. One script does the whole job.
 
-### 1. Download the project
+### 1. One-time setup
 
-Open **Terminal** on your Mac and run:
+1. **Install Xcode** from the Mac App Store and open it once. Also install **CMake**: `brew install cmake`.
+2. **Sign in:** in Xcode, open **Settings → Accounts**, add your Apple ID, and note the **Team ID** it shows (10 letters and numbers).
+3. **Pair your Apple TV** (same network as the Mac):
+   1. On the Apple TV, open **Settings → Remotes and Devices → Remote App and Devices**.
+   2. On the Mac, in Xcode, open **Window → Devices and Simulators**, select the Apple TV and click **Pair**. Enter the code shown on the TV.
+4. **Download the project** in Terminal:
 
 ```bash
 git clone https://github.com/mscproductions23/uzdoomtvos.git ~/uzdoomtvos
 ```
 
-### 2. Build the game engine
+### 2. Install
 
 ```bash
-cd ~/uzdoomtvos && ./tvos/build-tvos.sh
+cd ~/uzdoomtvos && ./tvos/install.sh --team ABCDE12345
 ```
 
-This downloads UZDoom and the libraries it needs, applies the Apple TV changes and builds everything. When it finishes, you'll see a summary. Running it again later is much faster, because finished parts are skipped.
+Use your own Team ID. The first run takes about 30–40 minutes, mostly building the engine. The script builds everything, signs the app with your Apple ID, installs it on your Apple TV and opens it. It saves your settings, so next time it's just:
 
-### 3. Open the app in Xcode
+```bash
+cd ~/uzdoomtvos && ./tvos/install.sh
+```
 
-1. Open `app/UZDoomTV.xcodeproj`.
-2. Click **UZDoomTV** in the left sidebar, then open the **Signing & Capabilities** tab.
-3. Under **Team**, pick your Apple ID. (Add it in Xcode → Settings → Accounts if it isn't listed.)
-4. If Xcode complains about the bundle ID, change it to something unique, e.g. `com.yourname.uzdoomtv`.
-5. **iCloud:** the project uses the maintainer's iCloud container, which your team can't use. With a paid developer account, use your own: pick a container ID such as `iCloud.com.yourname.uzdoomtv` and put it in `app/UZDoomTV.entitlements` and `app/Sources/App/DoomCloudStore.swift`, then tick it under **iCloud** on the same tab. With a free Apple ID, turn iCloud off instead (see [Troubleshooting](#troubleshooting)).
+**Options:**
+- `--icloud`: turn on iCloud sync (paid accounts only).
+- `--device "Living Room"`: choose an Apple TV if several are paired.
+- `--bundle-id com.yourname.uzdoomtv`: choose the app ID.
+- `--help`: show everything.
 
-### 4. Connect your Apple TV (first time only)
+The very first install on an Apple TV can pause at **"Fetching debug symbols"** or while preparing the device. Keep the TV awake; this happens only once per tvOS version.
 
-1. Make sure the Mac and Apple TV are on the same network.
-2. On the Apple TV, open **Settings → Remotes and Devices → Remote App and Devices**.
-3. In Xcode, open **Window → Devices and Simulators**. Your Apple TV should appear; click **Pair** and enter the code shown on the TV.
+### Free or paid Apple ID
 
-### 5. Run it
+| | Free Apple ID | Paid Apple Developer account |
+|---|---|---|
+| Install on your Apple TV | ✅ | ✅ |
+| How long an install lasts | 7 days, then run `./tvos/install.sh` again | 1 year |
+| iCloud sync | ❌ | ✅ with `--icloud` |
 
-Choose your Apple TV at the top of the Xcode window and press **Run** (▶ or ⌘R).
+Your saves stay on the Apple TV when you reinstall, as long as you keep the same app ID (the script does this for you).
 
-The very first run can sit at **"Fetching debug symbols"** for 10–30 minutes. That's normal and happens only once per tvOS version.
+### Installing with Xcode instead
 
-> **Free Apple ID?** The app will work for **7 days**, then you'll need to press Run in Xcode again. A paid developer account gives you a full year.
+1. Build the engine: `cd ~/uzdoomtvos && ./tvos/build-tvos.sh`
+2. Copy `app/Config/Local.xcconfig.example` to `app/Config/Local.xcconfig`, and fill in your Team ID and an app ID of your own.
+3. Open `app/UZDoomTV.xcodeproj`, choose your Apple TV at the top of the window, and press **Run** (▶ or ⌘R).
+
+For iCloud (paid accounts), also uncomment the two iCloud lines in `Local.xcconfig`. The app then uses the container `iCloud.<your app ID>`; tick it or create it under **Signing & Capabilities → iCloud** if Xcode asks.
 
 ---
 
 ## Updating to the newest version
 
 ```bash
-cd ~/uzdoomtvos && git pull && ./tvos/build-tvos.sh
+cd ~/uzdoomtvos && git pull && ./tvos/install.sh
 ```
-
-Then press **Run** in Xcode again.
 
 ---
 
@@ -220,12 +232,15 @@ Then press **Run** in Xcode again.
 |---|---|
 | The game list is greyed out | Connect a game controller, or connect your iPhone as one (see [Why a controller is required](#why-a-controller-is-required)). |
 | Controls feel wrong or inverted | Choose **Reset Controls to Default** in the launcher, then start the game again. |
-| Xcode says your team doesn't support the iCloud capability | You're building with a free Apple ID, which can't use iCloud. In Xcode, clear **Code Signing Entitlements** and remove `UZ_ICLOUD` from **Active Compilation Conditions** to build without iCloud. Everything except iCloud sync still works. |
+| Xcode says your team doesn't support the iCloud capability | iCloud needs a paid developer account. Run `./tvos/install.sh --team YOURTEAMID` again without `--icloud`, or delete the two iCloud lines from `app/Config/Local.xcconfig`. Everything except iCloud sync still works. |
+| A signing error mentions the team or the app ID | Make sure your Apple ID is added in **Xcode → Settings → Accounts** and that the Team ID you gave is yours. If the app ID is taken, choose another with `--bundle-id`. |
 | The launcher says there's no iCloud account | Sign in under **Settings → Users and Accounts** on the Apple TV, then go back to the launcher. See [Sync with your own iCloud](#sync-with-your-own-icloud). |
-| Xcode asks about the iCloud container, or says no container is selected | On **Signing & Capabilities → iCloud**, tick the container named in `app/UZDoomTV.entitlements`, or press **+** to create it. If you build under your own team, use your own container (see [step 3](#3-open-the-app-in-xcode)). |
+| Xcode asks about the iCloud container, or says no container is selected | On **Signing & Capabilities → iCloud**, tick `iCloud.<your app ID>`, or press **+** to create it. |
 | "No XCFramework found … MoltenVK.xcframework" | The engine build hasn't finished. Run `./tvos/build-tvos.sh` from inside the `uzdoomtvos` folder. |
-| The build script stops with an error | It prints the name of a log file. Open it, or send the last lines with a bug report. |
-| Frame drops or stutter | Running from Xcode slows the game down (debugger attached). For real performance, stop it in Xcode and open UZDoom from the Apple TV Home screen. Also keep vsync off and the resolution at 1080p (see [Default settings](#default-settings)). Some stutter the first time new effects appear is shaders compiling; this gets better on later runs. |
+| `install.sh` can't find your Apple TV | Pair it first (see [One-time setup](#1-one-time-setup)), keep it awake and on the same network. If several are paired, use `--device`. |
+| The app stopped opening after a week | Apps signed with a free Apple ID expire after 7 days. Run `./tvos/install.sh` again; your saves are kept. |
+| The build script stops with an error | It prints the name of a log file. Open it, or send the last lines with a [bug report](https://github.com/mscproductions23/uzdoomtvos/issues). |
+| Frame drops or stutter | Running from Xcode slows the game down (debugger attached). For real performance, open UZDoom from the Apple TV Home screen. Also keep vsync off and the resolution at 1080p (see [Default settings](#default-settings)). Some stutter the first time new effects appear is shaders compiling; this gets better on later runs. |
 | The phone controller says "Reconnecting…" | Make sure the phone is on the same Wi-Fi and the TV still shows the QR code (**Connect iPhone…**). If it doesn't recover, scan the QR code again: each connection uses a new key. |
 | "Fetching debug symbols" takes forever | Wait up to 30 minutes. If it's still stuck, quit Xcode, restart the Apple TV and try again. |
 
@@ -236,12 +251,31 @@ For more build options (rebuilding single parts, custom settings), see [`tvos/RE
 ## Known issues
 
 - **Keep vsync off.** Turning it on makes the frame rate drop sharply. The new-install defaults leave it off.
-- **Smeared textures with the hardware renderer.** With the hardware (GPU) renderer and texture filtering on, distant walls smear into stripes and floors turn flat grey. New installs use the software renderer, which holds 60 fps on an Apple TV 4K and doesn't have this problem.
+- **The hardware renderer breaks textures.** With the hardware (GPU) renderer, distant walls smear into stripes and floors turn flat grey. Please stay on the software renderer (the default), which holds 60 fps on an Apple TV 4K. Fixing the hardware renderer is a [milestone for a future release](#roadmap).
 - **Striped status-bar border with "classic" border scaling.** The pattern beside the status bar breaks up into stripes. New installs use the non-classic scaling, which draws correctly.
 - The pink title screen (a UZDoom bug on Apple GPUs, [UZDoom#1116](https://github.com/UZDoom/UZDoom/issues/1116)) is fixed by a workaround in this build.
 - **Above 1080p the frame rate drops.** The software renderer draws on the CPU, and the Apple TV 4K (2nd gen, A12) holds 60 fps at 1080p but not at 1440p or 4K. A 4K TV still looks fine, because the Apple TV scales the picture up.
 - **The iPhone controller has a little lag** compared with a real controller, because it goes over Wi-Fi.
-- No TestFlight or one-tap install yet; building on a Mac is currently the only way.
+- **Install needs a Mac.** There are no ready-made downloads yet; see [Installing](#installing-sideloading).
+
+---
+
+## Roadmap
+
+- **0.5 (this release):** software renderer at 60 fps, controllers with gyro and touchpad aim, iPhone controller, save backups, optional iCloud, one-command install.
+- **Next milestones:**
+  - **Hardware renderer:** fix its broken textures, so it can be used for mods and higher resolutions.
+  - **Wider device support:** results from older Apple TV models (see below), and performance above 1080p.
+  - **Easier installs:** ready-made downloads for sideloading, so a Mac with Xcode isn't needed.
+
+## Testing wanted
+
+Only the Apple TV 4K (2nd generation) has been tested so far. Reports from any other model are very welcome, **especially the Apple TV HD and the Apple TV 4K (1st generation)**. Please [open an issue](https://github.com/mscproductions23/uzdoomtvos/issues/new/choose) with:
+
+- the Apple TV model and tvOS version;
+- whether it installs and starts;
+- the frame rate in game: switch on **Show Frame Rate** in the launcher, then start a game;
+- anything that looks or sounds wrong, with a photo if you can.
 
 ---
 

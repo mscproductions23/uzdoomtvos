@@ -16,6 +16,8 @@ The SwiftUI launcher for the Apple TV port. For how to build, install and use it
 | `Sources/App/ControllerSettingsView.swift` | Controller Settings menu: gyro/touchpad aim, tester, reset; passes the aim settings to the engine |
 | `Sources/App/Assets.xcassets` | App icon, Top Shelf images and launcher logo, adapted from the UZDoom logo (CC BY-SA 4.0, © 2025 The UZDoom Team) |
 | `Sources/App/EngineBridge.swift` | Starts the engine; first-launch settings |
+| `Config/Base.xcconfig` | Shared build settings: default app ID, no team, iCloud off |
+| `Config/Local.xcconfig` | Your team, app ID and optional iCloud (not in git; written by `tvos/install.sh`, template in `Local.xcconfig.example`) |
 | `Frameworks/` | Built by `tvos/build-tvos.sh` (not in git) |
 | `Resources/` | Optional personal files for your own test builds. Everything in it is git-ignored |
 
