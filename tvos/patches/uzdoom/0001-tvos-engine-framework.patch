@@ -1379,6 +1379,149 @@ index 6b11536..9b340e6 100644
  
  	bool RaytracingEnabled();
  
+diff --git a/src/common/rendering/vulkan/textures/vk_hwtexture.cpp b/src/common/rendering/vulkan/textures/vk_hwtexture.cpp
+index a4975b7..45d48a3 100644
+--- a/src/common/rendering/vulkan/textures/vk_hwtexture.cpp
++++ b/src/common/rendering/vulkan/textures/vk_hwtexture.cpp
+@@ -27,6 +27,7 @@
+ #include "hw_renderstate.h"
+ #include <zvulkan/vulkanobjects.h>
+ #include <zvulkan/vulkanbuilders.h>
++#include <vector>
+ #include "vulkan/system/vk_renderdevice.h"
+ #include "vulkan/system/vk_commandbuffer.h"
+ #include "vulkan/textures/vk_samplers.h"
+@@ -140,6 +141,17 @@ void VkHardwareTexture::CreateTexture(int w, int h, int pixelsize, VkFormat form
+ 	if (w <= 0 || h <= 0)
+ 		throw CVulkanError("Trying to create zero size texture");
+ 
++#ifdef UZ_TVOS
++	// MoltenVK builds mip levels with vkCmdBlitImage by rendering into one level of a
++	// texture while sampling the same texture; on Apple TV that leaves every level after
++	// the first as smeared garbage. Build the mip chain on the CPU instead.
++	if (mipmap)
++	{
++		CreateTextureWithCpuMipmaps(w, h, pixelsize, format, (const uint8_t*)pixels);
++		return;
++	}
++#endif
++
+ 	int totalSize = w * h * pixelsize;
+ 
+ 	auto stagingBuffer = BufferBuilder()
+@@ -198,6 +210,98 @@ int VkHardwareTexture::GetMipLevels(int w, int h)
+ 	return levels;
+ }
+ 
++#ifdef UZ_TVOS
++void VkHardwareTexture::CreateTextureWithCpuMipmaps(int w, int h, int pixelsize, VkFormat format, const uint8_t *pixels)
++{
++	int levels = GetMipLevels(w, h);
++
++	// Size and 4-byte aligned buffer offset of every level.
++	std::vector<VkBufferImageCopy> regions(levels);
++	VkDeviceSize totalSize = 0;
++	int lw = w, lh = h;
++	for (int i = 0; i < levels; i++)
++	{
++		VkBufferImageCopy& region = regions[i];
++		region = {};
++		region.bufferOffset = totalSize;
++		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
++		region.imageSubresource.mipLevel = i;
++		region.imageSubresource.layerCount = 1;
++		region.imageExtent.width = lw;
++		region.imageExtent.height = lh;
++		region.imageExtent.depth = 1;
++		totalSize += ((VkDeviceSize)lw * lh * pixelsize + 3) & ~(VkDeviceSize)3;
++		lw = max(lw >> 1, 1);
++		lh = max(lh >> 1, 1);
++	}
++
++	// Build the chain in normal memory (staging memory can be slow to read back),
++	// each level a 2x2 box filter of the previous one.
++	std::vector<uint8_t> mips((size_t)totalSize);
++	memcpy(mips.data(), pixels, (size_t)w * h * pixelsize);
++	for (int i = 1; i < levels; i++)
++	{
++		const uint8_t* src = mips.data() + regions[i - 1].bufferOffset;
++		uint8_t* dst = mips.data() + regions[i].bufferOffset;
++		int sw = regions[i - 1].imageExtent.width, sh = regions[i - 1].imageExtent.height;
++		int dw = regions[i].imageExtent.width, dh = regions[i].imageExtent.height;
++		for (int y = 0; y < dh; y++)
++		{
++			int y0 = min(y * 2, sh - 1), y1 = min(y * 2 + 1, sh - 1);
++			for (int x = 0; x < dw; x++)
++			{
++				int x0 = min(x * 2, sw - 1), x1 = min(x * 2 + 1, sw - 1);
++				for (int c = 0; c < pixelsize; c++)
++				{
++					int sum = src[(y0 * sw + x0) * pixelsize + c] + src[(y0 * sw + x1) * pixelsize + c] +
++						src[(y1 * sw + x0) * pixelsize + c] + src[(y1 * sw + x1) * pixelsize + c];
++					dst[(y * dw + x) * pixelsize + c] = (uint8_t)((sum + 2) / 4);
++				}
++			}
++		}
++	}
++
++	auto stagingBuffer = BufferBuilder()
++		.Size(totalSize)
++		.Usage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY)
++		.DebugName("VkHardwareTexture.mStagingBuffer")
++		.Create(fb->device.get());
++
++	uint8_t* data = (uint8_t*)stagingBuffer->Map(0, totalSize);
++	memcpy(data, mips.data(), (size_t)totalSize);
++	stagingBuffer->Unmap();
++
++	mImage.Image = ImageBuilder()
++		.Format(format)
++		.Size(w, h, levels)
++		.Usage(VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
++		.DebugName("VkHardwareTexture.mImage")
++		.Create(fb->device.get());
++
++	mImage.View = ImageViewBuilder()
++		.Image(mImage.Image.get(), format)
++		.DebugName("VkHardwareTexture.mImageView")
++		.Create(fb->device.get());
++
++	auto cmdbuffer = fb->GetCommands()->GetTransferCommands();
++
++	VkImageTransition()
++		.AddImage(&mImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, true, 0, levels)
++		.Execute(cmdbuffer);
++
++	cmdbuffer->copyBufferToImage(stagingBuffer->buffer, mImage.Image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, levels, regions.data());
++
++	VkImageTransition()
++		.AddImage(&mImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, false, 0, levels)
++		.Execute(cmdbuffer);
++
++	// If we queued more than 64 MB of data already: wait until the uploads finish before continuing
++	fb->GetCommands()->TransferDeleteList->Add(std::move(stagingBuffer));
++	if (fb->GetCommands()->TransferDeleteList->TotalSize > 64 * 1024 * 1024)
++		fb->GetCommands()->WaitForCommands(false, true);
++}
++#endif
++
+ void VkHardwareTexture::AllocateBuffer(int w, int h, int texelsize)
+ {
+ 	if (mImage.Image && (mImage.Image->width != w || mImage.Image->height != h || mTexelsize != texelsize))
+diff --git a/src/common/rendering/vulkan/textures/vk_hwtexture.h b/src/common/rendering/vulkan/textures/vk_hwtexture.h
+index 2711bdb..40a4065 100644
+--- a/src/common/rendering/vulkan/textures/vk_hwtexture.h
++++ b/src/common/rendering/vulkan/textures/vk_hwtexture.h
+@@ -49,6 +49,9 @@ private:
+ 	void CreateImage(FTexture *tex, int translation, int flags);
+ 
+ 	void CreateTexture(int w, int h, int pixelsize, VkFormat format, const void *pixels, bool mipmap);
++#ifdef UZ_TVOS
++	void CreateTextureWithCpuMipmaps(int w, int h, int pixelsize, VkFormat format, const uint8_t *pixels);
++#endif
+ 	static int GetMipLevels(int w, int h);
+ 
+ 	VkTextureImage mImage;
 diff --git a/src/common/thirdparty/richpresence.cpp b/src/common/thirdparty/richpresence.cpp
 index a8d8e81..c4bc7a6 100644
 --- a/src/common/thirdparty/richpresence.cpp
