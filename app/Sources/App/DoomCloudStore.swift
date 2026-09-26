@@ -6,9 +6,9 @@
 //  Source of truth: the user's private CloudKit database.
 //  Local mirror: Caches directory (tvOS-safe; may be purged by the OS).
 //
-//  Container setup (Xcode > target > Signing & Capabilities):
-//    + iCloud capability, check "CloudKit"
-//    + Container: iCloud.com.mscproductions.uzdoom  (same on BOTH targets)
+//  Data lives in the private database of the iCloud account signed in on the device
+//  (tvOS apps can't sign in to iCloud themselves). The container ID is set in
+//  UZDoomTV.entitlements and below; builds under another team must use their own.
 //
 
 import CloudKit
@@ -101,6 +101,34 @@ actor DoomCloudStore {
         set { UserDefaults.standard.set(newValue, forKey: syncEnabledKey) }
     }
     nonisolated static let syncEnabledKey = "iCloudSyncEnabled"
+
+    /// What the launcher shows about iCloud.
+    enum AccountState: Equatable, Sendable {
+        case notInThisBuild, switchedOff, available, noAccount, restricted, temporarilyUnavailable, unknown
+    }
+
+    /// The iCloud account signed in on this Apple TV (Settings → Users and Accounts).
+    func accountState() async -> AccountState {
+        guard let container else { return .notInThisBuild }
+        guard Self.syncEnabled else { return .switchedOff }
+        do {
+            switch try await container.accountStatus() {
+            case .available:              return .available
+            case .noAccount:              return .noAccount
+            case .restricted:             return .restricted
+            case .temporarilyUnavailable: return .temporarilyUnavailable
+            default:                      return .unknown
+            }
+        } catch {
+            return .unknown
+        }
+    }
+
+    /// Call when the device's iCloud account changes (.CKAccountChanged): another user's
+    /// private database needs its own zone check.
+    func accountChanged() {
+        zoneReady = false
+    }
 
     private func ensureZone() async throws {
         guard Self.syncEnabled else { throw DoomCloudError.iCloudDisabled }
