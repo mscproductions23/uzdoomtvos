@@ -146,7 +146,10 @@ For more build options (rebuilding single parts, custom settings), see [`tvos/RE
 
 ## Known issues
 
-- The UZDoom loading screen and the title screen could look **pink** (a known UZDoom bug on Apple GPUs, [UZDoom#1116](https://github.com/UZDoom/UZDoom/issues/1116)). This build includes a workaround that is still being tested.
+- **Keep vsync off.** Turning it on makes the frame rate drop sharply. The new-install defaults leave it off.
+- **Smeared textures with the hardware renderer.** With the hardware (GPU) renderer and texture filtering on, distant walls smear into stripes and floors turn flat grey. New installs use the software renderer, which holds 60 fps on an Apple TV 4K and doesn't have this problem.
+- **Striped status-bar border with "classic" border scaling.** The pattern beside the status bar breaks up into stripes. New installs use the non-classic scaling, which draws correctly.
+- The pink title screen (a UZDoom bug on Apple GPUs, [UZDoom#1116](https://github.com/UZDoom/UZDoom/issues/1116)) is fixed by a workaround in this build.
 - No TestFlight or one-tap install yet; building on a Mac is currently the only way.
 - iCloud sync is switched off in test builds until the paid developer team is set up.
 

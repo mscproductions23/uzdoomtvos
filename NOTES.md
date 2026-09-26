@@ -61,6 +61,31 @@ Problems that were queued up behind it:
   and `fm_banks/` sit at the bundle root. Engine output also goes to
   `Caches/uzdoom.log` on the device.
 
+## Apple TV rendering findings (September 25, 2026, Apple TV 4K 2nd gen, A12)
+
+- **Pink or green title screen and menus** (UZDoom#1116, MoltenVK#2220): MoltenVK 1.2.7 and later only set
+  `MTLTextureUsagePixelFormatView` on images created with `MUTABLE_FORMAT`. The fix is in
+  ZVulkan's `ImageBuilder`: on `UZ_TVOS` it adds `MUTABLE_FORMAT` to every colour image and
+  `SAMPLED` to transfer-source images. Confirmed on the device.
+- **Texture smear** (hardware renderer): with any texture filter except None, walls smear along
+  one texture axis and floors turn one flat colour. Close-up surfaces look right. Building
+  the mipmaps on the CPU (`CreateTextureWithCpuMipmaps`) did NOT fix it, so the mip contents
+  aren't the cause. The status-bar border fill (a wrapped 2D draw using the same REPEAT sampler)
+  shows the same striping with `ui_screenborder_classic_scaling=true`, even with the filter set
+  to None. Suspects: REPEAT addressing or texture-coordinate derivatives under MoltenVK on A12.
+  Unresolved; worked around by the defaults below.
+- **Vsync**: `vid_vsync=true` (Vulkan FIFO) makes the frame rate collapse. The likely cause is that
+  frames missing the 16.7 ms deadline wait a whole refresh, halving the rate. On tvOS, Core
+  Animation syncs to the display anyway (`displaySyncEnabled` is macOS-only), so vsync off
+  should not tear. Keep it off.
+- **Settings that hold 60 fps**, found by the user on the device and written by the launcher as a starter
+  `uzdoom.ini` on first launch (`EngineBridge.starterConfig`): software renderer
+  (`vid_rendermode=0`), custom 1920x1080 scaling with linear upscale and `r_magfilter`, vsync off,
+  texture filter None / anisotropy 1, `screenblocks=11`, non-classic HUD and border scaling,
+  `r_skymode=0`.
+- The config and the Vulkan pipeline cache are saved when the app goes to the background
+  (`I_TvosSuspend`), because tvOS usually kills backgrounded apps without a clean exit.
+
 ## Layout
 
     app/                  SwiftUI launcher + Xcode project
