@@ -1289,24 +1289,6 @@ index 0edec62..e61d633 100644
  	#include <OpenGL/OpenGL.h>
  #endif
  
-diff --git a/src/common/rendering/v_video.cpp b/src/common/rendering/v_video.cpp
-index 0d48b75..197db74 100644
---- a/src/common/rendering/v_video.cpp
-+++ b/src/common/rendering/v_video.cpp
-@@ -179,7 +179,12 @@ CVAR (Int, vid_defwidth, 640, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
- CVAR (Int, vid_defheight, 480, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
- CVAR (Bool, ticker, false, 0)
- 
--CUSTOM_CVAR (Bool, vid_vsync, false, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
-+#ifdef UZ_TVOS
-+#define UZ_VSYNC_DEFAULT true // avoid tearing on TVs
-+#else
-+#define UZ_VSYNC_DEFAULT false
-+#endif
-+CUSTOM_CVAR (Bool, vid_vsync, UZ_VSYNC_DEFAULT, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
- {
- 	if (screen != NULL)
- 	{
 diff --git a/src/common/rendering/v_video.h b/src/common/rendering/v_video.h
 index ed428ee..4341035 100644
 --- a/src/common/rendering/v_video.h
