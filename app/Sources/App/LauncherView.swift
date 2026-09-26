@@ -1,5 +1,6 @@
 import SwiftUI
 import GameController
+import CloudKit
 import CoreImage.CIFilterBuiltins
 
 struct LauncherView: View {
@@ -8,6 +9,8 @@ struct LauncherView: View {
     @State private var showResetConfirm = false
     @State private var controlsMessage: String?
     @AppStorage(DoomCloudStore.syncEnabledKey) private var iCloudSync = true
+    @State private var iCloudState: DoomCloudStore.AccountState = .unknown
+    @Environment(\.scenePhase) private var scenePhase
 
     /// A real game controller, or the iPhone controller page, is connected.
     private var canPlay: Bool { controllers.hasGamepad || library.phonePadConnected }
@@ -97,14 +100,12 @@ struct LauncherView: View {
                         #if UZ_ICLOUD
                         Toggle("iCloud Sync", isOn: $iCloudSync)
                             .onChange(of: iCloudSync) { _, _ in
-                                Task { await library.refresh() }
+                                Task {
+                                    await library.refresh()
+                                    await updateICloudState()
+                                }
                             }
-                        Text(iCloudSync
-                             ? "Saves and WADs sync through your iCloud account."
-                             : "Off: saves and WADs stay on this Apple TV.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                        iCloudStatus
                         #endif
 
                         Button("Install Freedoom (free)") {
@@ -153,6 +154,55 @@ struct LauncherView: View {
             }
             .padding(60)
         }
+        #if UZ_ICLOUD
+        .task { await updateICloudState() }
+        // Signing in happens in the Apple TV's Settings, so check again on return...
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await updateICloudState() } }
+        }
+        // ...and when the device's iCloud account changes (another person's saves).
+        .onReceive(NotificationCenter.default.publisher(for: .CKAccountChanged)) { _ in
+            Task {
+                await DoomCloudStore.shared.accountChanged()
+                await updateICloudState()
+                await library.refresh()
+            }
+        }
+        #endif
+    }
+
+    /// iCloud status under the switch. tvOS apps can't sign in to iCloud themselves:
+    /// the account signed in on the Apple TV is used, so point there when it's missing.
+    @ViewBuilder
+    private var iCloudStatus: some View {
+        let (icon, color, text): (String, Color, String) = {
+            switch iCloudState {
+            case .available:
+                return ("checkmark.icloud", .green,
+                        "Syncing with the iCloud account signed in on this Apple TV. Only that account can see these saves.")
+            case .noAccount:
+                return ("exclamationmark.icloud", .orange,
+                        "No iCloud account on this Apple TV. Sign in under Settings → Users and Accounts, then come back here.")
+            case .restricted:
+                return ("lock.icloud", .orange,
+                        "iCloud is restricted on this Apple TV (for example by Screen Time).")
+            case .temporarilyUnavailable:
+                return ("exclamationmark.icloud", .orange,
+                        "iCloud is temporarily unavailable. Check Settings → Users and Accounts → iCloud.")
+            case .switchedOff, .notInThisBuild:
+                return ("icloud.slash", .secondary, "Off: saves and WADs stay on this Apple TV.")
+            case .unknown:
+                return ("icloud", .secondary, "Checking iCloud…")
+            }
+        }()
+        Label(text, systemImage: icon)
+            .font(.caption)
+            .foregroundStyle(color)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func updateICloudState() async {
+        iCloudState = await DoomCloudStore.shared.accountState()
     }
 
     private func resetControls() {

@@ -98,7 +98,15 @@ Saves are kept on the Apple TV. They survive updates, but **deleting the app era
 2. Under **Back up your saves**, tap a save to download it, or **Download all saves (.zip)**.
 3. To restore, open the same page and send the backup `.zip` (or single `.zds` saves) with **Send to Apple TV**. No need to unzip; the Apple TV unpacks it.
 
-With **iCloud Sync** switched on in the launcher, saves also sync through your iCloud account: they download when you start a game and upload when you leave the app. Switch it off to keep everything on the Apple TV only.
+### Sync with your own iCloud
+
+Saves sync to the **iCloud account signed in on the Apple TV**, into that account's private storage. Only that account can see them; the app's developer can't.
+
+1. On the Apple TV, open **Settings → Users and Accounts** and make sure you're signed in to iCloud. (Apps can't sign you in themselves; tvOS always uses this account.)
+2. In the launcher, switch **iCloud Sync** on. The line under it confirms the account is working, or tells you what to fix.
+3. Play as usual. Saves download when you start a game and upload when you leave the app.
+
+If several people use the Apple TV, each person's saves go to their own iCloud when they're the active user. Switch **iCloud Sync** off to keep everything on the Apple TV only.
 
 ---
 
@@ -179,7 +187,8 @@ Then press **Run** in Xcode again.
 |---|---|
 | The game list is greyed out | Connect a game controller, or connect your iPhone as one (see [Why a controller is required](#why-a-controller-is-required)). |
 | Controls feel wrong or inverted | Choose **Reset Controls to Default** in the launcher, then start the game again. |
-| "Personal development teams … do not support the iCloud capability" | Your Apple ID has no paid developer membership (or it lapsed). Either renew it, or in Xcode clear **Code Signing Entitlements** and remove `UZ_ICLOUD` from **Active Compilation Conditions** to build without iCloud. |
+| Xcode says your team doesn't support the iCloud capability | You're building with a free Apple ID, which can't use iCloud. In Xcode, clear **Code Signing Entitlements** and remove `UZ_ICLOUD` from **Active Compilation Conditions** to build without iCloud. Everything except iCloud sync still works. |
+| The launcher says there's no iCloud account | Sign in under **Settings → Users and Accounts** on the Apple TV, then go back to the launcher. See [Sync with your own iCloud](#sync-with-your-own-icloud). |
 | Xcode asks about the iCloud container, or says no container is selected | On **Signing & Capabilities → iCloud**, tick the container named in `app/UZDoomTV.entitlements`, or press **+** to create it. If you build under your own team, use your own container (see [step 3](#3-open-the-app-in-xcode)). |
 | "No XCFramework found … MoltenVK.xcframework" | The engine build hasn't finished. Run `./tvos/build-tvos.sh` from inside the `uzdoomtvos` folder. |
 | The build script stops with an error | It prints the name of a log file. Open it, or send the last lines with a bug report. |
