@@ -121,6 +121,17 @@ the same XInput-style layout, so the default pad bindings and menus just work. O
 time. A connected phone counts as a controller for the launcher's "controller required" check,
 and receiving doesn't auto-stop while it's connected.
 
+## Gyro, touchpad, mouse
+
+`i_gcjoystick.mm` reads `GCMotion.rotationRate` (gyro) and the DualShock/DualSense
+`touchpadPrimary`, and turns them into `EV_Mouse` events in exact angle units (see
+`PostAimDegrees`: ev.x of 1 = 16/65536 of a turn, with the remainder carried over). Settings are
+non-archived cvars (`joy_gyro`, `joy_gyro_sensitivity`, `joy_gyro_invert_x/y`,
+`joy_touchpad_aim`, `joy_touchpad_sensitivity`) passed by the launcher (`ControllerPrefs.engineArgs`).
+A touchpad click posts Tab (automap). Gyro axis signs (yaw = -rotationRate.y, pitch = +x) are
+untested on hardware; the invert options cover it. Mice go through SDL, which reads GCMouse on
+tvOS (ENABLE_GCMOUSE), not through this file.
+
 ## Saves
 
 The engine gets `-savedir <Caches>/saves` and writes `.zds` files straight into it, with no

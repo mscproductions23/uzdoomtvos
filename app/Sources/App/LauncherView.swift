@@ -6,8 +6,6 @@ import CoreImage.CIFilterBuiltins
 struct LauncherView: View {
     @ObservedObject var library: WadLibrary
     @StateObject private var controllers = ControllerMonitor()
-    @State private var showResetConfirm = false
-    @State private var controlsMessage: String?
     @AppStorage(DoomCloudStore.syncEnabledKey) private var iCloudSync = false
     @State private var iCloudState: DoomCloudStore.AccountState = .unknown
     @Environment(\.scenePhase) private var scenePhase
@@ -21,7 +19,14 @@ struct LauncherView: View {
 
                 // Game list — tvOS focus engine handles remote/controller navigation for free.
                 VStack(alignment: .leading, spacing: 24) {
-                    Text("UZDoom").font(.largeTitle).bold()
+                    HStack(spacing: 22) {
+                        Image("UZDoomLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 96)
+                            .accessibilityHidden(true)
+                        Text("UZDoom").font(.largeTitle).bold()
+                    }
 
                     if !canPlay {
                         VStack(alignment: .leading, spacing: 8) {
@@ -115,23 +120,12 @@ struct LauncherView: View {
                         Text("Controller").font(.title2).bold()
                             .padding(.top, 8)
 
-                        NavigationLink("Controls & Controller Test") {
-                            ControlsView()
+                        NavigationLink("Controller Settings…") {
+                            ControllerSettingsView()
                         }
-
-                        Button("Reset Controls to Default") {
-                            showResetConfirm = true
-                        }
-                        .confirmationDialog("Reset all controls to the default layout?",
-                                            isPresented: $showResetConfirm, titleVisibility: .visible) {
-                            Button("Reset", role: .destructive) { resetControls() }
-                            Button("Cancel", role: .cancel) {}
-                        }
-
-                        if let message = controlsMessage {
-                            Text(message).font(.callout).foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
+                        Text("Gyro and touchpad aim, the button layout and tester, and resetting controls.")
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
 
                         if let busy = library.busyMessage {
                             ProgressView(busy)
@@ -203,16 +197,6 @@ struct LauncherView: View {
 
     private func updateICloudState() async {
         iCloudState = await DoomCloudStore.shared.accountState()
-    }
-
-    private func resetControls() {
-        do {
-            controlsMessage = try ControlConfig.resetToDefaults()
-                ? "Controls reset. The default layout applies next time you start a game."
-                : "Controls are already at their defaults."
-        } catch {
-            controlsMessage = "Couldn't reset controls: \(error.localizedDescription)"
-        }
     }
 }
 

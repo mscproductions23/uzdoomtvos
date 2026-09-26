@@ -382,18 +382,21 @@ index 7d55157..5dc7681 100644
  														   error:nil];
 diff --git a/src/common/platform/posix/sdl/i_gcjoystick.mm b/src/common/platform/posix/sdl/i_gcjoystick.mm
 new file mode 100644
-index 0000000..a0ef5ef
+index 0000000..8cba827
 --- /dev/null
 +++ b/src/common/platform/posix/sdl/i_gcjoystick.mm
-@@ -0,0 +1,733 @@
+@@ -0,0 +1,864 @@
 +// i_gcjoystick.mm: game controller input for tvOS via Apple's GameController framework. Part of UZDoom; see LICENSE for terms.
 +
 +#import <GameController/GameController.h>
++#import <Foundation/Foundation.h>
 +#include "m_joy.h"
 +#include "keydef.h"
 +#include "basics.h"
 +#include "cmdlib.h"
 +#include "d_eventbase.h"
++#include "c_cvars.h"
++#include "menustate.h"
 +#include <cmath>
 +#include <mutex>
 +
@@ -417,6 +420,43 @@ index 0000000..a0ef5ef
 +	for (int i = 0; i < 6; i++)
 +		TouchPad.Axes[i] = (TouchPad.Connected && axes != nullptr) ? axes[i] : 0.f;
 +	TouchPad.Buttons = TouchPad.Connected ? buttons : 0;
++}
++
++// Aim settings. The launcher's Controller Settings screen passes these on every start
++// (+joy_gyro 1 …), so they aren't saved in uzdoom.ini.
++CVAR(Bool, joy_gyro, false, 0)
++CVAR(Float, joy_gyro_sensitivity, 1.f, 0)
++CVAR(Bool, joy_gyro_invert_x, false, 0)
++CVAR(Bool, joy_gyro_invert_y, false, 0)
++CVAR(Bool, joy_touchpad_aim, false, 0)
++CVAR(Float, joy_touchpad_sensitivity, 1.f, 0)
++
++// Posts view rotation as EV_Mouse events. System_DispatchEvent turns ev.x into
++// G_AddViewAngle(int(ev.x * m_yaw * 16)) in 1/65536-turn units, so one unit of ev.x is
++// 16/65536 of a turn. Whole units are posted and the remainder carried over, so slow,
++// steady motion isn't lost to rounding. Positive yaw = turn right, positive pitch = look up.
++static void PostAimDegrees(double yawDeg, double pitchDeg)
++{
++	static double accYaw = 0, accPitch = 0;
++	if (menuactive != MENU_Off)
++	{
++		accYaw = accPitch = 0;
++		return;
++	}
++	accYaw += yawDeg * 65536.0 / 360.0;
++	accPitch += pitchDeg * 65536.0 / 360.0;
++	int yawUnits = int(accYaw);
++	int pitchUnits = int(accPitch);
++	accYaw -= yawUnits;
++	accPitch -= pitchUnits;
++	if (yawUnits == 0 && pitchUnits == 0)
++		return;
++
++	event_t ev = {};
++	ev.type = EV_Mouse;
++	ev.x = yawUnits / 16.f;
++	ev.y = pitchUnits / 16.f;
++	D_PostEvent(&ev);
 +}
 +
 +// MACROS ------------------------------------------------------------------
@@ -495,9 +535,14 @@ index 0000000..a0ef5ef
 +	int LastButtons;
 +	bool Connected;
 +	bool Enabled;
++	double LastAimTime = 0;
++	bool TouchpadTouching = false;
++	float TouchpadX = 0, TouchpadY = 0;
++	bool TouchpadClick = false;
 +
 +	void Attached();
 +	void Detached();
++	void ProcessAim(GCExtendedGamepad *pad);
 +
 +	static void ProcessThumbstick(float value1, AxisInfo *axis1, float value2, AxisInfo *axis2, int base);
 +	static void ProcessTrigger(float value, AxisInfo *axis, int base);
@@ -614,6 +659,8 @@ index 0000000..a0ef5ef
 +		{
 +			return;
 +		}
++
++		if (pad != nil) ProcessAim(pad);
 +
 +		// Physical controller values (0 when none), plus the touch pad, clamped.
 +		float lx = pad ? pad.leftThumbstick.xAxis.value : 0.f;
@@ -755,7 +802,91 @@ index 0000000..a0ef5ef
 +	}
 +	Joy_GenerateButtonEvents(LastButtons, 0, 16, KEY_PAD_DPAD_UP);
 +	LastButtons = 0;
++	if (TouchpadClick)
++	{
++		event_t ev = {};
++		ev.type = EV_KeyUp;
++		ev.data1 = KEY_TAB;
++		D_PostEvent(&ev);
++		TouchpadClick = false;
++	}
++	TouchpadTouching = false;
++	LastAimTime = 0;
 +	UpdateJoystickMenu(NULL);
++}
++
++//==========================================================================
++//
++// FGCController :: ProcessAim
++//
++// Gyro and touchpad aiming (mouse-style: rotate or swipe by an angle, the
++// view follows by that angle times the sensitivity), and the touchpad click.
++//
++//==========================================================================
++
++void FGCController::ProcessAim(GCExtendedGamepad *pad)
++{
++	double now = [[NSProcessInfo processInfo] systemUptime];
++	double dt = LastAimTime > 0 ? now - LastAimTime : 0;
++	LastAimTime = now;
++	if (dt < 0 || dt > 0.1) dt = 0;   // after a pause, don't jump
++
++	GCMotion *motion = pad.controller.motion;
++	if (motion != nil)
++	{
++		// Some controllers keep the sensors off until asked; switch them off again when unused (battery).
++		if (motion.sensorsRequireManualActivation && motion.sensorsActive != (BOOL)*joy_gyro)
++			motion.sensorsActive = *joy_gyro;
++		if (*joy_gyro && motion.hasRotationRate && dt > 0)
++		{
++			GCRotationRate rate = motion.rotationRate;   // radians per second
++			double scale = 57.29578 * dt * *joy_gyro_sensitivity;
++			double yaw = -rate.y * scale;                 // turning the controller right turns right
++			double pitch = rate.x * scale;                // tilting the top up looks up
++			if (*joy_gyro_invert_x) yaw = -yaw;
++			if (*joy_gyro_invert_y) pitch = -pitch;
++			PostAimDegrees(yaw, pitch);
++		}
++	}
++
++	GCControllerDirectionPad *touchpad = nil;
++	GCControllerButtonInput *touchpadButton = nil;
++	if ([pad isKindOfClass:[GCDualShockGamepad class]])
++	{
++		touchpad = ((GCDualShockGamepad *)pad).touchpadPrimary;
++		touchpadButton = ((GCDualShockGamepad *)pad).touchpadButton;
++	}
++	else if ([pad isKindOfClass:[GCDualSenseGamepad class]])
++	{
++		touchpad = ((GCDualSenseGamepad *)pad).touchpadPrimary;
++		touchpadButton = ((GCDualSenseGamepad *)pad).touchpadButton;
++	}
++
++	if (touchpad != nil)
++	{
++		float x = touchpad.xAxis.value, y = touchpad.yAxis.value;
++		bool touching = x != 0.f || y != 0.f;   // the pad reads 0,0 when no finger is on it
++		if (*joy_touchpad_aim && touching && TouchpadTouching)
++		{
++			// Swiping the full width turns 90 degrees at sensitivity 1.
++			PostAimDegrees((x - TouchpadX) * 45.0 * *joy_touchpad_sensitivity,
++			               (y - TouchpadY) * 30.0 * *joy_touchpad_sensitivity);
++		}
++		TouchpadTouching = touching;
++		TouchpadX = x;
++		TouchpadY = y;
++	}
++
++	// Touchpad click = Tab (automap, like the keyboard).
++	bool click = touchpadButton != nil && touchpadButton.pressed;
++	if (click != TouchpadClick)
++	{
++		event_t ev = {};
++		ev.type = click ? EV_KeyDown : EV_KeyUp;
++		ev.data1 = KEY_TAB;
++		D_PostEvent(&ev);
++		TouchpadClick = click;
++	}
 +}
 +
 +//==========================================================================
