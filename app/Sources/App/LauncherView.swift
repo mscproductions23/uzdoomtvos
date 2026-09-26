@@ -56,91 +56,100 @@ struct LauncherView: View {
                     }
                 }
 
-                // Side panel: transfer + fallback actions
-                VStack(alignment: .leading, spacing: 24) {
-                    Text("Add Games & Saves").font(.title2).bold()
+                // Side panel. It scrolls (tvOS follows focus), so nothing gets squeezed or cut off.
+                ScrollView(.vertical) {
+                    VStack(alignment: .leading, spacing: 22) {
+                        Text("iPhone").font(.title2).bold()
 
-                    Button(library.beamAddress == nil ? "Connect iPhone…" : "Disconnect iPhone") {
-                        library.toggleBeam()
-                    }
-
-                    if let address = library.beamAddress {
-                        // The link carries a one-time key, so it's shown as a QR code rather than text.
-                        HStack(alignment: .top, spacing: 24) {
-                            if let qr = QRCode.image(for: address) {
-                                Image(uiImage: qr)
-                                    .interpolation(.none)
-                                    .resizable()
-                                    .frame(width: 220, height: 220)
-                                    .padding(12)
-                                    .background(Color.white, in: RoundedRectangle(cornerRadius: 12))
-                            }
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("Scan with your iPhone camera")
-                                    .font(.headline)
-                                Text("Your iPhone must be on the same Wi-Fi. Send games and saves, back up your saves, or use the phone as a controller.")
-                                    .foregroundStyle(.secondary)
-                                Text(library.phonePadConnected
-                                     ? "iPhone controller connected."
-                                     : "Disconnects by itself after 15 minutes unless the phone is being used as a controller.")
-                                    .foregroundStyle(library.phonePadConnected ? .green : .secondary)
-                            }
-                            .font(.callout)
+                        Button(library.beamAddress == nil ? "Connect iPhone…" : "Disconnect iPhone") {
+                            library.toggleBeam()
                         }
-                        .frame(maxWidth: 600, alignment: .leading)
-                    }
 
-                    #if UZ_ICLOUD
-                    Toggle("iCloud Sync", isOn: $iCloudSync)
-                        .frame(maxWidth: 500)
-                        .onChange(of: iCloudSync) { _, _ in
-                            Task { await library.refresh() }
+                        if let address = library.beamAddress {
+                            // The link carries a one-time key, so it's shown as a QR code rather than text.
+                            HStack(alignment: .top, spacing: 22) {
+                                if let qr = QRCode.image(for: address) {
+                                    Image(uiImage: qr)
+                                        .interpolation(.none)
+                                        .resizable()
+                                        .frame(width: 200, height: 200)
+                                        .padding(12)
+                                        .background(Color.white, in: RoundedRectangle(cornerRadius: 12))
+                                }
+                                VStack(alignment: .leading, spacing: 10) {
+                                    Text("Scan with your iPhone")
+                                        .font(.headline)
+                                    Text("Same Wi-Fi. Send games and saves, back up saves, or use the phone as a controller.")
+                                        .foregroundStyle(.secondary)
+                                    Text(library.phonePadConnected
+                                         ? "iPhone controller connected."
+                                         : "Turns off after 15 minutes, unless the phone is the controller.")
+                                        .foregroundStyle(library.phonePadConnected ? .green : .secondary)
+                                }
+                                .font(.callout)
+                                .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
-                    Text(iCloudSync
-                         ? "Saves and WADs sync through your iCloud account."
-                         : "Off: saves and WADs stay on this Apple TV.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    #endif
 
-                    Button("Install Freedoom (free)") {
-                        Task { await library.installFreedoom() }
+                        Text("Games & Saves").font(.title2).bold()
+                            .padding(.top, 8)
+
+                        #if UZ_ICLOUD
+                        Toggle("iCloud Sync", isOn: $iCloudSync)
+                            .onChange(of: iCloudSync) { _, _ in
+                                Task { await library.refresh() }
+                            }
+                        Text(iCloudSync
+                             ? "Saves and WADs sync through your iCloud account."
+                             : "Off: saves and WADs stay on this Apple TV.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        #endif
+
+                        Button("Install Freedoom (free)") {
+                            Task { await library.installFreedoom() }
+                        }
+
+                        Text("Controller").font(.title2).bold()
+                            .padding(.top, 8)
+
+                        NavigationLink("Controls & Controller Test") {
+                            ControlsView()
+                        }
+
+                        Button("Reset Controls to Default") {
+                            showResetConfirm = true
+                        }
+                        .confirmationDialog("Reset all controls to the default layout?",
+                                            isPresented: $showResetConfirm, titleVisibility: .visible) {
+                            Button("Reset", role: .destructive) { resetControls() }
+                            Button("Cancel", role: .cancel) {}
+                        }
+
+                        if let message = controlsMessage {
+                            Text(message).font(.callout).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        if let busy = library.busyMessage {
+                            ProgressView(busy)
+                        }
+
+                        if let error = library.lastError {
+                            Text(error).foregroundStyle(.red).font(.callout)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        Text("Back up your saves with Connect iPhone. Commercial WADs must be your own copies.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 8)
                     }
-
-                    Text("Controller").font(.title2).bold()
-
-                    NavigationLink("Controls & Controller Test") {
-                        ControlsView()
-                    }
-
-                    Button("Reset Controls to Default") {
-                        showResetConfirm = true
-                    }
-                    .confirmationDialog("Reset all controls to the default layout?",
-                                        isPresented: $showResetConfirm, titleVisibility: .visible) {
-                        Button("Reset", role: .destructive) { resetControls() }
-                        Button("Cancel", role: .cancel) {}
-                    }
-
-                    if let message = controlsMessage {
-                        Text(message).font(.callout).foregroundStyle(.secondary)
-                            .frame(maxWidth: 500, alignment: .leading)
-                    }
-
-                    if let busy = library.busyMessage {
-                        ProgressView(busy)
-                    }
-
-                    if let error = library.lastError {
-                        Text(error).foregroundStyle(.red).font(.callout)
-                            .frame(maxWidth: 500, alignment: .leading)
-                    }
-
-                    Spacer()
-
-                    Text("Back up saves any time with Connect iPhone….\nCommercial WADs must be your own copies.")
-                        .font(.footnote).foregroundStyle(.secondary)
+                    .padding(.vertical, 20)   // room for the focus lift effect at the ends
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .frame(width: 640)
             }
             .padding(60)
         }

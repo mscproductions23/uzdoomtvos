@@ -113,7 +113,7 @@ final class BeamServer {
         }
         switch (request.method, path) {
         case ("GET", "/"):
-            respond(connection, status: "200 OK", contentType: "text/html", body: Data(Self.uploadPage.utf8))
+            respond(connection, status: "200 OK", contentType: "text/html; charset=utf-8", body: Data(Self.uploadPage.utf8))
 
         case ("GET", "/saves.json"):
             let items = Self.saveFiles().map { url -> [String: Any] in
@@ -296,7 +296,7 @@ final class BeamServer {
     }
 
     private static let expiredPage = """
-    <!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+    <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     <title>UZDoom TV</title>
     <style>body{font-family:-apple-system,sans-serif;margin:1.5rem;background:#111;color:#eee}h1{color:#e33}</style>
     </head><body><h1>Link expired</h1>
@@ -319,7 +319,7 @@ final class BeamServer {
     }
 
     private static let uploadPage = """
-    <!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+    <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     <title>UZDoom TV</title>
     <style>
     body{font-family:-apple-system,sans-serif;margin:1.5rem;background:#111;color:#eee;line-height:1.4}
