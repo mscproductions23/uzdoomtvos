@@ -145,7 +145,7 @@ For more build options (rebuilding single parts, custom settings), see [`tvos/RE
 
 ## Known issues
 
-- The UZDoom loading screen and the Freedoom title screen can look **pink**. Gameplay colours are fine.
+- The UZDoom loading screen and the title screen could look **pink** (a known UZDoom bug on Apple GPUs, [UZDoom#1116](https://github.com/UZDoom/UZDoom/issues/1116)). This build includes a workaround that is still being tested.
 - No TestFlight or one-tap install yet; building on a Mac is currently the only way.
 - iCloud sync is switched off in test builds until the paid developer team is set up.
 
