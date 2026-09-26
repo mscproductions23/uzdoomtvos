@@ -1,5 +1,7 @@
 # tvOS Build Script
 
+> **Just want to install it?** Run `./tvos/install.sh --team YOURTEAMID` from the repo folder. It runs this script, then builds, signs and installs the app on your paired Apple TV. See the main [README](../README.md#installing-sideloading).
+
 ## What It Does
 
 The `build-tvos.sh` script automates building the UZDoom engine and all its dependencies from source for Apple TV (tvOS). It fetches the source repositories, applies patches, builds each dependency (SDL2, ZMusic, libvpx, OpenAL), creates native build tools, compiles the tvOS engine, and packages everything into the app's Frameworks directory.

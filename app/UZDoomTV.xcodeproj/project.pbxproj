@@ -91,6 +91,7 @@
 		5A7E00000000000000000009 /* lights.pk3 */ = {isa = PBXFileReference; lastKnownFileType = file; path = lights.pk3; sourceTree = "<group>"; };
 		5A7E0000000000000000000B /* soundfonts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = soundfonts; sourceTree = "<group>"; };
 		5A7E0000000000000000000D /* fm_banks */ = {isa = PBXFileReference; lastKnownFileType = folder; path = fm_banks; sourceTree = "<group>"; };
+		5A7E00000000000000000018 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -135,6 +136,7 @@
 		43848E0214D1D14AAFF885F1 = {
 			isa = PBXGroup;
 			children = (
+				5A7E00000000000000000019 /* Config */,
 				37E57B95300D029300DC0C4C /* game_support.pk3 */,
 				37E57B96300D029300DC0C4C /* game_widescreen_gfx.pk3 */,
 				37E57B97300D029300DC0C4C /* uzdoom.pk3 */,
@@ -197,6 +199,14 @@
 			path = Frameworks;
 			sourceTree = "<group>";
 		};
+		5A7E00000000000000000019 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				5A7E00000000000000000018 /* Base.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -231,7 +241,6 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					F5887321A69F4AFB6A4B259B = {
-						DevelopmentTeam = YOURTEAMID;
 						LastSwiftMigration = 2700;
 					};
 				};
@@ -300,13 +309,13 @@
 /* Begin XCBuildConfiguration section */
 		0BC871F40CAA2816D63077F2 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5A7E00000000000000000018 /* Base.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = UZDoomTV.entitlements;
-				DEVELOPMENT_TEAM = YOURTEAMID;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) UZ_ICLOUD";
+				CODE_SIGN_ENTITLEMENTS = "$(UZ_ENTITLEMENTS)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) $(UZ_EXTRA_CONDITIONS)";
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/Frameworks",
@@ -319,7 +328,7 @@
 					"@executable_path/Frameworks",
 				);
 				OTHER_LDFLAGS = "$(inherited)";
-				PRODUCT_BUNDLE_IDENTIFIER = com.mscproductions.uzdoomtv;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(UZ_BUNDLE_ID)";
 				SDKROOT = appletvos;
 				SWIFT_OBJC_BRIDGING_HEADER = "Sources/App/UZDoomTV-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -330,13 +339,13 @@
 		};
 		9D2178BF0E6F0977A0C3C0C6 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5A7E00000000000000000018 /* Base.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = UZDoomTV.entitlements;
-				DEVELOPMENT_TEAM = YOURTEAMID;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) UZ_ICLOUD";
+				CODE_SIGN_ENTITLEMENTS = "$(UZ_ENTITLEMENTS)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) $(UZ_EXTRA_CONDITIONS)";
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/Frameworks",
@@ -349,7 +358,7 @@
 					"@executable_path/Frameworks",
 				);
 				OTHER_LDFLAGS = "$(inherited)";
-				PRODUCT_BUNDLE_IDENTIFIER = com.mscproductions.uzdoomtv;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(UZ_BUNDLE_ID)";
 				SDKROOT = appletvos;
 				SWIFT_OBJC_BRIDGING_HEADER = "Sources/App/UZDoomTV-Bridging-Header.h";
 				SWIFT_VERSION = 5.9;

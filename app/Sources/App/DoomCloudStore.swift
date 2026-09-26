@@ -70,7 +70,9 @@ actor DoomCloudStore {
     // without the iCloud entitlement crashes, so it only exists in builds with
     // the UZ_ICLOUD compilation condition (plus UZDoomTV.entitlements).
     #if UZ_ICLOUD
-    private let container: CKContainer? = CKContainer(identifier: "iCloud.com.mscproductions.uzdoomtv")
+    // The container ID comes from the build settings (Config/*.xcconfig) through Info.plist.
+    private let container: CKContainer? = (Bundle.main.object(forInfoDictionaryKey: "UZICloudContainer") as? String)
+        .flatMap { $0.isEmpty ? nil : CKContainer(identifier: $0) }
     #else
     private let container: CKContainer? = nil
     #endif

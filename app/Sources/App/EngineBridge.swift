@@ -9,6 +9,9 @@ final class EngineBridge {
 
     static let shared = EngineBridge()
 
+    /// Launcher switch: show the engine's frame-rate counter.
+    static let showFrameRateKey = "showFrameRate"
+
     @Published private(set) var isRunning = false
     private(set) var isControllerConnected = GCController.controllers().isEmpty == false
 
@@ -108,6 +111,9 @@ final class EngineBridge {
             "+logfile", logFilePath,
         ]
         args += ControllerPrefs.engineArgs()   // gyro / touchpad aim (Controller Settings)
+        if UserDefaults.standard.bool(forKey: Self.showFrameRateKey) {
+            args += ["+vid_fps", "1"]
+        }
 
         // Set SDL_VULKAN_LIBRARY to embedded MoltenVK so both SDL and engine use it.
         let moltenVKPath = bundle.privateFrameworksURL!.appendingPathComponent("MoltenVK.framework/MoltenVK").path

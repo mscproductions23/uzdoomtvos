@@ -1,0 +1,16 @@
+// Build and signing settings shared by everyone. Put your own values in Local.xcconfig
+// (same folder, not in git): tvos/install.sh writes it for you, or copy
+// Local.xcconfig.example. See the README's install section.
+
+// Bundle ID. Must be unique to your Apple developer team, so set your own in Local.xcconfig.
+UZ_BUNDLE_ID = com.mscproductions.uzdoomtv
+
+// Your Apple developer team ID (Xcode → Settings → Accounts). Empty here on purpose.
+DEVELOPMENT_TEAM =
+
+// iCloud sync is off unless Local.xcconfig turns it on. It needs a paid developer account.
+UZ_ENTITLEMENTS =
+UZ_EXTRA_CONDITIONS =
+UZ_ICLOUD_CONTAINER = iCloud.$(UZ_BUNDLE_ID)
+
+#include? "Local.xcconfig"

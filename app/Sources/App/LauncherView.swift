@@ -7,6 +7,7 @@ struct LauncherView: View {
     @ObservedObject var library: WadLibrary
     @StateObject private var controllers = ControllerMonitor()
     @AppStorage(DoomCloudStore.syncEnabledKey) private var iCloudSync = false
+    @AppStorage(EngineBridge.showFrameRateKey) private var showFrameRate = false
     @State private var iCloudState: DoomCloudStore.AccountState = .unknown
     @Environment(\.scenePhase) private var scenePhase
 
@@ -116,6 +117,11 @@ struct LauncherView: View {
                         Button("Install Freedoom (free)") {
                             Task { await library.installFreedoom() }
                         }
+
+                        Toggle("Show Frame Rate", isOn: $showFrameRate)
+                        Text("Shows the frames per second in the corner of the game. Handy for testing.")
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
 
                         Text("Controller").font(.title2).bold()
                             .padding(.top, 8)

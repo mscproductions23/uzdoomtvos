@@ -16,3 +16,6 @@ app/fm_banks/
 app/Resources/*
 !app/Resources/.gitkeep
 *.a
+
+# Personal signing settings (team ID, bundle ID, iCloud)
+app/Config/Local.xcconfig

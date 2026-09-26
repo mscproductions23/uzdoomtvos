@@ -1,0 +1,11 @@
+// Copy this file to Local.xcconfig (same folder) and fill it in. Local.xcconfig is git-ignored.
+
+// Your team ID: Xcode → Settings → Accounts → select your Apple ID → Team ID.
+DEVELOPMENT_TEAM = ABCDE12345
+
+// Something unique to you, in reverse-DNS form.
+UZ_BUNDLE_ID = com.yourname.uzdoomtv
+
+// Optional, paid developer accounts only: turn on iCloud sync.
+// UZ_ENTITLEMENTS = UZDoomTV.entitlements
+// UZ_EXTRA_CONDITIONS = UZ_ICLOUD
