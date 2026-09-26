@@ -28,7 +28,7 @@ To pair one, open **Settings → Remotes and Devices → Bluetooth** on the Appl
 
 - **Freedoom included**: Freedoom is a free, legal Doom-compatible game. If you have no game files, the app downloads it for you.
 - **Use your own Doom games**: add `DOOM.WAD`, `DOOM2.WAD`, `TNT.WAD`, `PLUTONIA.WAD` or mods (`.pk3`) that you own.
-- **Send files from your iPhone**: no cables needed; see [Adding your own games](#adding-your-own-games).
+- **Send files from your iPhone**: no cables needed; see [Adding your own games](#adding-your-own-games). The same page backs up your saves; see [Your saves](#your-saves).
 - **Pauses properly** when you press the TV button to go back to the Home screen.
 - **iCloud sync** of games and saves between your devices. This needs a paid Apple developer account and is currently switched off in test builds.
 
@@ -72,6 +72,18 @@ B and X (○ and □) are free for you to assign.
 5. Choose **Stop Receiving** when you're done. Your games now appear in the list.
 
 > **Please only use game files you own.** The commercial Doom games are not included and must never be uploaded to this repository.
+
+---
+
+## Your saves
+
+Saves are kept on the Apple TV. They survive updates, but **deleting the app erases them**, and tvOS may clear them if the Apple TV runs very low on storage. To back them up:
+
+1. In the launcher, choose **Beam from iPhone…** and open the address on your iPhone (same Wi-Fi).
+2. Under **Back up your saves**, tap a save to download it, or **Download all saves (.zip)**.
+3. To restore, open the same page and send the `.zds` files back with **Send to Apple TV**. (Unzip the backup first in the Files app.)
+
+iCloud save sync is built in and will be switched on in a later build.
 
 ---
 

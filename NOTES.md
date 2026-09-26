@@ -101,9 +101,19 @@ TNT.WAD, PLUTONIA.WAD) must never be committed; `.gitignore` covers `*.wad`.
 
 ## Signing / iCloud
 
-iCloud (CloudKit save/WAD sync) needs the paid Apple Developer Program team;
-the free Personal Team (`YOURTEAMID`, shown as "mscproductions") cannot
-provision it. The target signs with `UZDoomTV.entitlements` and sets the
-`UZ_ICLOUD` compilation condition. To build with a Personal Team instead,
-clear Code Signing Entitlements and remove `UZ_ICLOUD`; `DoomCloudStore`
-then never creates a `CKContainer` (doing so without the entitlement crashes).
+Team `YOURTEAMID` ("mscproductions") is the paid Apple Developer Program team. The Mac has
+its Developer ID certificate, and its tvOS profiles last a year. The "Personal development
+teams do not support iCloud" error seen on 2026-09-25 happened while the membership had
+lapsed. iCloud is currently OFF (commit cd165bb removed `CODE_SIGN_ENTITLEMENTS` and
+`UZ_ICLOUD`). Reverting cd165bb turns it back on; `DEVELOPMENT_TEAM` is already correct.
+Without `UZ_ICLOUD`, `DoomCloudStore` never creates a `CKContainer` (doing so without the
+entitlement crashes).
+
+## Saves
+
+The engine gets `-savedir <Caches>/saves` and writes `.zds` files straight into it, with no
+per-game subfolder. tvOS has no permanent local storage: Caches survive reinstalling over
+the app, but not deleting it, and the system may purge them when storage is low. Backups:
+- the Beam page (`BeamServer`, port 8080) lists saves and serves `/saves/<name>` and
+  `/saves.zip` for download, and still accepts `.zds` uploads to restore them;
+- iCloud sync in `DoomCloudStore` (down on launch, up on background) once iCloud is on.
