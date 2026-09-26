@@ -13,6 +13,8 @@ The SwiftUI launcher for the Apple TV port. For how to build, install and use it
 | `Sources/App/BeamServer.swift` | Small web server for the iPhone: uploads, save backup/restore, touch controller |
 | `Sources/App/PadPage.swift` | The iPhone touch-controller page |
 | `Sources/App/ControlsView.swift` | Controller layout and live tester |
+| `Sources/App/ControllerSettingsView.swift` | Controller Settings menu: gyro/touchpad aim, tester, reset; passes the aim settings to the engine |
+| `Sources/App/Assets.xcassets` | App icon, Top Shelf images and launcher logo, adapted from the UZDoom logo (CC BY-SA 4.0, © 2025 The UZDoom Team) |
 | `Sources/App/EngineBridge.swift` | Starts the engine; first-launch settings |
 | `Frameworks/` | Built by `tvos/build-tvos.sh` (not in git) |
 | `Resources/` | Optional personal files for your own test builds. Everything in it is git-ignored |

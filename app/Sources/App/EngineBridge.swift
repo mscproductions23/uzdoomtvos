@@ -107,6 +107,7 @@ final class EngineBridge {
             "+use_joystick",      "1",   // a controller is required; older configs saved it off
             "+logfile", logFilePath,
         ]
+        args += ControllerPrefs.engineArgs()   // gyro / touchpad aim (Controller Settings)
 
         // Set SDL_VULKAN_LIBRARY to embedded MoltenVK so both SDL and engine use it.
         let moltenVKPath = bundle.privateFrameworksURL!.appendingPathComponent("MoltenVK.framework/MoltenVK").path

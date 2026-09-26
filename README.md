@@ -57,9 +57,18 @@ Xbox, PlayStation and other MFi controllers all use the same layout:
 
 B and X (○ and □) are free for you to assign.
 
-- **See and test it:** in the launcher, choose **Controls & Controller Test**. The layout lights up as you press each button or move a stick. **Hold** B or Menu to leave.
+- **Controller Settings:** in the launcher, choose **Controller Settings…** for gyro and touchpad aiming, the layout tester and resetting controls.
+- **See and test it:** in **Controller Settings…**, choose **Controls & Controller Test**. The layout lights up as you press each button or move a stick. **Hold** B or Menu to leave.
 - **Change a button:** start a game and open **Options → Customize Controls**.
-- **Start over:** choose **Reset Controls to Default** in the launcher.
+- **Start over:** choose **Reset Controls to Default** in **Controller Settings…**.
+
+### Gyro, touchpad and mouse
+
+Turn these on in **Controller Settings…**. They apply the next time you start a game.
+
+- **Gyro aim** (DualShock 4, DualSense, Switch Pro): tilt and turn the controller to aim, on top of the right stick. You can set the sensitivity and invert each direction.
+- **Touchpad aim** (DualShock 4, DualSense): swipe the touchpad to aim. Clicking the touchpad opens the automap.
+- **Mouse:** a mouse works when tvOS reports it as one: move to look, click to fire. Whether a particular device, such as a Switch 2 Joy-Con in mouse mode, is reported as a mouse is up to tvOS and hasn't been tested.
 
 ### iPhone as a controller
 
@@ -226,6 +235,7 @@ More technical background is in [`NOTES.md`](NOTES.md).
 ## Credits and license
 
 - **UZDoom** and the GZDoom/ZDoom teams: the engine. Licensed under the GNU GPL v3.
+- **UZDoom logo** © 2025 The UZDoom Team, licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). The app icon, Top Shelf images and launcher logo are adapted from it (recoloured background, resized) and are shared under the same license.
 - **Freedoom**: free game content, BSD licence.
 - **SDL**, **ZMusic**, **OpenAL Soft**, **libvpx**, **MoltenVK**: libraries used by the engine, each under its own licence.
 
