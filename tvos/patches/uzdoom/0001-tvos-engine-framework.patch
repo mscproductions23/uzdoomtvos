@@ -1076,20 +1076,21 @@ index 0000000..302aa11
 +	return NULL;
 +}
 diff --git a/src/common/platform/posix/sdl/i_input.cpp b/src/common/platform/posix/sdl/i_input.cpp
-index 37807d5..a62cccf 100644
+index 37807d5..9c57cf8 100644
 --- a/src/common/platform/posix/sdl/i_input.cpp
 +++ b/src/common/platform/posix/sdl/i_input.cpp
-@@ -46,6 +46,9 @@
+@@ -46,6 +46,10 @@
  #include "keydef.h"
  #include "i_interface.h"
  #include "engineerrors.h"
 +#ifdef UZ_TVOS
 +void S_SetSoundPaused(int state);
++bool M_SaveDefaults(const char *filename);
 +#endif
  #include "i_interface.h"
  
  
-@@ -224,6 +227,31 @@ static void I_CheckNativeMouse ()
+@@ -224,6 +228,33 @@ static void I_CheckNativeMouse ()
  	}
  }
  
@@ -1105,6 +1106,8 @@ index 37807d5..a62cccf 100644
 +		screen->WaitForCommands(false);
 +		screen->SaveShaderCache(); // tvOS usually kills backgrounded apps without a clean exit
 +	}
++	// Same reason: write uzdoom.ini now, or settings changed this session are lost.
++	M_SaveDefaults(nullptr);
 +
 +	SDL_Event ev;
 +	while (SDL_WaitEvent(&ev))
@@ -1121,7 +1124,7 @@ index 37807d5..a62cccf 100644
  void MessagePump (const SDL_Event &sev)
  {
  	static int lastx = 0, lasty = 0;
-@@ -240,6 +268,12 @@ void MessagePump (const SDL_Event &sev)
+@@ -240,6 +271,12 @@ void MessagePump (const SDL_Event &sev)
  		ProcessSDLWindowEvent(sev.window);
  		break;
  
