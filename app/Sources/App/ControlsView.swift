@@ -191,39 +191,52 @@ struct ControlsTesterContent: View {
     let onExit: () -> Void
     @StateObject private var tester = GamepadTester()
 
+    // Three columns of six rows fits all 17 controls on a 1080p screen, inside the TV-safe margins.
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 24), count: 3)
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 30) {
-            Text("Controls")
-                .font(.largeTitle)
-                .bold()
-            Text(tester.controllerName.map { "Testing: \($0) — press buttons and move the sticks; each one lights up." } ?? "Connect a game controller to test it.")
-                .font(.headline)
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 40), GridItem(.flexible(), spacing: 40)], alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(alignment: .firstTextBaseline, spacing: 24) {
+                Text("Controls")
+                    .font(.title2)
+                    .bold()
+                Text(tester.controllerName.map { "Testing \($0): press buttons and move the sticks." } ?? "Connect a game controller to test it.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 14) {
                 ForEach(ControlBinding.defaults) { row in
-                    HStack(spacing: 20) {
+                    HStack(spacing: 14) {
                         Image(systemName: row.symbol)
-                            .font(.title2)
-                            .frame(width: 60)
-                        VStack(alignment: .leading) {
+                            .font(.title3)
+                            .frame(width: 44)
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(row.control)
-                                .font(.headline)
-                            Text(row.action)
                                 .font(.callout)
+                                .bold()
+                            Text(row.action)
+                                .font(.caption)
                                 .foregroundStyle(row.action == "Not set" ? .secondary : .primary)
                         }
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     }
-                    .padding(16)
-                    .background(RoundedRectangle(cornerRadius: 16).fill(
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(RoundedRectangle(cornerRadius: 14).fill(
                         tester.active.contains(row.id) ? Color.green.opacity(0.45) : Color.white.opacity(0.06)
                     ))
                     .animation(.easeOut(duration: 0.1), value: tester.active)
                 }
             }
             Text(tester.holdingExit ? "Keep holding to leave…" : "Hold B or Menu to leave. To change a button, start a game and open Options → Customize Controls.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
+                .font(.caption)
+                .foregroundStyle(tester.holdingExit ? .primary : .secondary)
         }
-        .padding(60)
+        // tvOS TV-safe area is about 90 pt left/right and 60 pt top/bottom; the view ignores it, so pad here.
+        .padding(.horizontal, 90)
+        .padding(.vertical, 60)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear {
             tester.onExit = onExit

@@ -59,6 +59,9 @@ final class EngineBridge {
             "+use_joystick",      "1",   // a controller is required; older configs saved it off
             "+logfile", logFilePath,
         ]
+        #if DEBUG
+        args += ["+vid_fps", "1"]   // frame-rate counter in test builds run from Xcode
+        #endif
 
         // Set SDL_VULKAN_LIBRARY to embedded MoltenVK so both SDL and engine use it.
         let moltenVKPath = bundle.privateFrameworksURL!.appendingPathComponent("MoltenVK.framework/MoltenVK").path
