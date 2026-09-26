@@ -299,6 +299,24 @@ index d5e8955..934ac83 100644
  endif()
  
  if( WIN32 )
+diff --git a/src/common/engine/m_joy.cpp b/src/common/engine/m_joy.cpp
+index 1e4b2f3..1eb9195 100644
+--- a/src/common/engine/m_joy.cpp
++++ b/src/common/engine/m_joy.cpp
+@@ -59,7 +59,12 @@ EXTERN_CVAR(Bool, joy_xinput)
+ 
+ // PUBLIC DATA DEFINITIONS -------------------------------------------------
+ 
+-CUSTOM_CVARD(Bool, use_joystick, false, CVAR_ARCHIVE|CVAR_GLOBALCONFIG|CVAR_NOINITCALL, "enables input from the joystick if it is present") 
++#ifdef UZ_TVOS
++#define UZ_JOY_DEFAULT true // the Apple TV build requires a controller
++#else
++#define UZ_JOY_DEFAULT false
++#endif
++CUSTOM_CVARD(Bool, use_joystick, UZ_JOY_DEFAULT, CVAR_ARCHIVE|CVAR_GLOBALCONFIG|CVAR_NOINITCALL, "enables input from the joystick if it is present") 
+ {
+ #ifdef _WIN32
+ 	joy_ps2raw->Callback();
 diff --git a/src/common/objects/autosegs.cpp b/src/common/objects/autosegs.cpp
 index e9b3f93..49eb554 100644
 --- a/src/common/objects/autosegs.cpp
@@ -1265,6 +1283,24 @@ index 0edec62..e61d633 100644
  	#include <OpenGL/OpenGL.h>
  #endif
  
+diff --git a/src/common/rendering/v_video.cpp b/src/common/rendering/v_video.cpp
+index 0d48b75..197db74 100644
+--- a/src/common/rendering/v_video.cpp
++++ b/src/common/rendering/v_video.cpp
+@@ -179,7 +179,12 @@ CVAR (Int, vid_defwidth, 640, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
+ CVAR (Int, vid_defheight, 480, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
+ CVAR (Bool, ticker, false, 0)
+ 
+-CUSTOM_CVAR (Bool, vid_vsync, false, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
++#ifdef UZ_TVOS
++#define UZ_VSYNC_DEFAULT true // avoid tearing on TVs
++#else
++#define UZ_VSYNC_DEFAULT false
++#endif
++CUSTOM_CVAR (Bool, vid_vsync, UZ_VSYNC_DEFAULT, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
+ {
+ 	if (screen != NULL)
+ 	{
 diff --git a/src/common/thirdparty/richpresence.cpp b/src/common/thirdparty/richpresence.cpp
 index a8d8e81..c4bc7a6 100644
 --- a/src/common/thirdparty/richpresence.cpp

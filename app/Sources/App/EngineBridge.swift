@@ -56,6 +56,7 @@ final class EngineBridge {
             "-config",  configURL.path,
             "+vid_preferbackend", "1",   // Vulkan → MoltenVK → Metal
             "+vid_fullscreen",    "1",
+            "+use_joystick",      "1",   // a controller is required; older configs saved it off
             "+logfile", logFilePath,
         ]
 

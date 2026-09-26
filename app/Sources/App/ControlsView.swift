@@ -1,5 +1,6 @@
 import SwiftUI
 import GameController
+import UIKit
 
 struct ControlBinding: Identifiable {
     let id: String
@@ -31,7 +32,10 @@ struct ControlBinding: Identifiable {
 @MainActor final class GamepadTester: ObservableObject {
     @Published private(set) var active: Set<String> = []
     @Published private(set) var controllerName: String? = nil
+    @Published private(set) var holdingExit = false
+    var onExit: (() -> Void)?
     private var observers: [NSObjectProtocol] = []
+    private var holdTask: Task<Void, Never>?
 
     func start() {
         observers.append(
@@ -62,8 +66,29 @@ struct ControlBinding: Identifiable {
         observers = []
         for controller in GCController.controllers() {
             controller.extendedGamepad?.valueChangedHandler = nil
+            controller.microGamepad?.valueChangedHandler = nil
         }
+        holdTask?.cancel()
+        holdTask = nil
+        holdingExit = false
+        onExit = nil
         active = []
+    }
+
+    /// Called with whether an exit button (B/Menu, or the Siri Remote's Menu or Play/Pause) is held.
+    private func handleExitHold(_ held: Bool) {
+        if held && !holdingExit {
+            holdingExit = true
+            holdTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(1.5))
+                guard let self, !Task.isCancelled, self.holdingExit else { return }
+                self.onExit?()
+            }
+        } else if !held && holdingExit {
+            holdingExit = false
+            holdTask?.cancel()
+            holdTask = nil
+        }
     }
 
     private func attach() {
@@ -78,6 +103,16 @@ struct ControlBinding: Identifiable {
         } else {
             controllerName = nil
             active = []
+        }
+
+        for controller in controllers {
+            if controller.extendedGamepad == nil, let micro = controller.microGamepad {
+                micro.valueChangedHandler = { [weak self] micro, _ in
+                    MainActor.assumeIsolated {
+                        self?.handleExitHold(micro.buttonMenu.isPressed || micro.buttonX.isPressed)
+                    }
+                }
+            }
         }
     }
 
@@ -137,14 +172,24 @@ struct ControlBinding: Identifiable {
         }
 
         active = activeSet
+        handleExitHold(pad.buttonB.isPressed || pad.buttonMenu.isPressed)
     }
 }
 
+/// Pushed from the launcher. Controller input is captured, so B/Menu can't navigate back;
+/// holding B or Menu calls dismiss instead.
 struct ControlsView: View {
-    @StateObject private var tester = GamepadTester()
     @Environment(\.dismiss) private var dismiss
-    @State private var exitArmed = false
-    @FocusState private var cardFocused: Bool
+
+    var body: some View {
+        ControllerCaptureView(content: AnyView(ControlsTesterContent(onExit: { dismiss() })))
+            .ignoresSafeArea()
+    }
+}
+
+struct ControlsTesterContent: View {
+    let onExit: () -> Void
+    @StateObject private var tester = GamepadTester()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 30) {
@@ -174,34 +219,69 @@ struct ControlsView: View {
                     .animation(.easeOut(duration: 0.1), value: tester.active)
                 }
             }
-            .focusable()
-            .focused($cardFocused)
-            .onMoveCommand { _ in }
-            .onExitCommand {
-                handleExit()
-            }
-            Text(exitArmed ? "Press B or Menu again to leave." : "To change a button, start a game and open Options → Customize Controls. Press B or Menu twice to leave this screen.")
+            Text(tester.holdingExit ? "Keep holding to leave…" : "Hold B or Menu to leave. To change a button, start a game and open Options → Customize Controls.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
         .padding(60)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear {
+            tester.onExit = onExit
             tester.start()
-            cardFocused = true
         }
         .onDisappear {
             tester.stop()
         }
     }
+}
 
-    private func handleExit() {
-        if exitArmed {
-            dismiss()
-        } else {
-            exitArmed = true
-            Task { try? await Task.sleep(for: .seconds(2)); exitArmed = false }
-        }
+/// Hosts SwiftUI content inside a GCEventViewController so game-controller (and Siri Remote)
+/// input is delivered only to GameController, not to UIKit focus/navigation.
+struct ControllerCaptureView: UIViewControllerRepresentable {
+    let content: AnyView
+
+    func makeUIViewController(context: Context) -> ControllerCaptureViewController {
+        ControllerCaptureViewController(rootView: content)
     }
+
+    // The content never changes; replacing rootView would rebuild it and lose the tester's state.
+    func updateUIViewController(_ controller: ControllerCaptureViewController, context: Context) {}
+}
+
+final class ControllerCaptureViewController: GCEventViewController {
+    let host: UIHostingController<AnyView>
+
+    init(rootView: AnyView) {
+        host = UIHostingController(rootView: rootView)
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is not supported")
+    }
+
+    override func loadView() {
+        view = FocusableView()
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        controllerUserInteractionEnabled = false
+        addChild(host)
+        host.view.frame = view.bounds
+        host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        host.view.backgroundColor = .clear
+        view.addSubview(host.view)
+        host.didMove(toParent: self)
+    }
+
+    // Keep focus (and so the responder chain) inside this controller.
+    override var preferredFocusEnvironments: [UIFocusEnvironment] { [view] }
+}
+
+/// A plain view that can hold focus, so this controller stays first in the responder chain.
+final class FocusableView: UIView {
+    override var canBecomeFocused: Bool { true }
 }
 
 enum ControlConfig {
