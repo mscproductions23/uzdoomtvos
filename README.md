@@ -30,7 +30,7 @@ To pair one, open **Settings → Remotes and Devices → Bluetooth** on the Appl
 - **Use your own Doom games**: add `DOOM.WAD`, `DOOM2.WAD`, `TNT.WAD`, `PLUTONIA.WAD` or mods (`.pk3`) that you own.
 - **Send files from your iPhone**: no cables needed; see [Adding your own games](#adding-your-own-games). The same page backs up your saves; see [Your saves](#your-saves).
 - **Pauses properly** when you press the TV button to go back to the Home screen.
-- **iCloud sync** of games and saves between your devices, with an on/off switch in the launcher. Everything also works offline with it off.
+- **iCloud sync** of games and saves between your devices. It's off by default; switch it on in the launcher. Everything works offline without it.
 - **iPhone as a controller**: a touchscreen gamepad in Safari, no app needed.
 - **Tuned for Apple TV**: new installs start with settings that hold 60 fps. Your own changes are saved automatically.
 

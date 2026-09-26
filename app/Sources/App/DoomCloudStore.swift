@@ -97,7 +97,7 @@ actor DoomCloudStore {
 
     /// The launcher's iCloud Sync switch. Off: WADs and saves stay on this Apple TV only.
     nonisolated static var syncEnabled: Bool {
-        get { UserDefaults.standard.object(forKey: syncEnabledKey) as? Bool ?? true }
+        get { UserDefaults.standard.object(forKey: syncEnabledKey) as? Bool ?? false }   // off until the player turns it on
         set { UserDefaults.standard.set(newValue, forKey: syncEnabledKey) }
     }
     nonisolated static let syncEnabledKey = "iCloudSyncEnabled"
