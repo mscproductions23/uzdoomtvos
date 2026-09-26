@@ -23,6 +23,32 @@ final class EngineBridge {
         }
     }
 
+    /// Written as uzdoom.ini when none exists. Version=228 matches UZDoom 4.14.3's config
+    /// version, so the engine doesn't run its old-config upgrade steps on this file.
+    private static let starterConfig = """
+        [LastRun]
+        Version=228
+
+        [GlobalSettings]
+        use_joystick=true
+        vid_rendermode=0
+        vid_scalemode=5
+        vid_scale_customwidth=1920
+        vid_scale_customheight=1080
+        vid_scale_linear=true
+        vid_vsync=false
+        r_magfilter=true
+        gl_texture_filter=0
+        gl_texture_filter_anisotropic=1
+
+        [Doom.ConsoleVariables]
+        screenblocks=11
+        hud_oldscale=false
+        ui_screenborder_classic_scaling=false
+        r_skymode=0
+
+        """
+
     func launch(iwad: URL, saveDirectory: URL) {
         guard !isRunning else { return }
         isRunning = true
@@ -41,6 +67,12 @@ final class EngineBridge {
         let configURL = saveDirectory
             .deletingLastPathComponent()
             .appendingPathComponent("uzdoom.ini")
+
+        // First launch: start from settings tuned on an Apple TV 4K (A12) to hold 60 fps.
+        // The engine adds everything else and saves the result.
+        if !FileManager.default.fileExists(atPath: configURL.path) {
+            try? Self.starterConfig.write(to: configURL, atomically: true, encoding: .utf8)
+        }
 
         // Get log file path in Caches directory.
         let cachesDirURL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
