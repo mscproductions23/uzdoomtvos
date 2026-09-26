@@ -184,7 +184,7 @@ index be18a86..986f177 100644
  		return nullptr;
  
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index d5e8955..934ac83 100644
+index d5e8955..d84dacd 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
 @@ -25,6 +25,9 @@ endif()
