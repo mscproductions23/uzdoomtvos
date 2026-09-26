@@ -1,53 +1,27 @@
-# UZDoomTV — scaffold
+# UZDoomTV app
 
-A tvOS app shell for a UZDoom port with controller support, iCloud-synced WADs and
-saves, iPhone beaming, and Freedoom as the automatic fallback.
+The SwiftUI launcher for the Apple TV port. For how to build, install and use it, see the
+[main README](../README.md). For technical background, see [NOTES.md](../NOTES.md).
 
-**Phase 1 (this scaffold, runs today):** launcher UI, WAD discovery (bundle → local →
-iCloud), Freedoom auto-install, beam-from-iPhone receiver, CloudKit sync. The engine
-call is a stub.
+| File | What it does |
+|---|---|
+| `Sources/App/UZDoomTVApp.swift` | App entry point; uploads saves to iCloud when the app goes to the background |
+| `Sources/App/LauncherView.swift` | Launcher screen, QR code, iCloud switch, controller requirement |
+| `Sources/App/WadLibrary.swift` | Finds games (bundle → local → iCloud) and starts them |
+| `Sources/App/DoomCloudStore.swift` | CloudKit sync of WADs and saves (only with `UZ_ICLOUD` and the switch on) |
+| `Sources/App/FreedoomInstaller.swift` | Downloads Freedoom |
+| `Sources/App/BeamServer.swift` | Small web server for the iPhone: uploads, save backup/restore, touch controller |
+| `Sources/App/PadPage.swift` | The iPhone touch-controller page |
+| `Sources/App/ControlsView.swift` | Controller layout and live tester |
+| `Sources/App/EngineBridge.swift` | Starts the engine; first-launch settings |
+| `Frameworks/` | Built by `tvos/build-tvos.sh` (not in git) |
+| `Resources/` | Optional personal files for your own test builds. Everything in it is git-ignored |
 
-**Phase 2 (on your Mac):** compile UZDoom for tvOS and wire it into
-`EngineBridge.swift`. See `ENGINE_INTEGRATION.md`.
+## Security notes
 
-## Getting the scaffold running
-
-1. `brew install xcodegen`
-2. Edit `project.yml`: set your bundle ID prefix, bundle ID, `DEVELOPMENT_TEAM`
-   (your Apple Developer team ID), and the iCloud container ID.
-3. Edit `DoomCloudStore.swift`: set the same container ID in `CKContainer(identifier:)`.
-4. Run `xcodegen` in this directory → open `UZDoomTV.xcodeproj`.
-5. Select your Apple TV as the destination and run.
-
-First run notes:
-- With no WADs anywhere, the app downloads **Freedoom** automatically and lists
-  Phase 1 & Phase 2 as playable.
-- For your personal testing path: drag `DOOM.WAD`, `DOOM2.WAD`, `TNT.WAD`,
-  `PLUTONIA.WAD` into `Resources/` before running — they'll show as "Built-in".
-- **Beam from iPhone**: select it in the launcher, then open the shown
-  `http://<appletv-ip>:8080` address in Safari on your iPhone (same Wi-Fi) and pick
-  files. `.wad`/`.pk3` land in the WAD library, `.zds` saves land in the save folder.
-- **CloudKit**: after the first run creates the schema, open the CloudKit Console
-  and mark `fileName` (WadFile) and `iwadName` (SaveGame) as *queryable* — queries
-  fail without those indexes.
-
-## Legal note
-
-Freedoom is freely redistributable; the commercial IWADs are not. Keep them to
-personal sideloaded builds using your own copies.
-
-## Layout
-
-```
-project.yml                  XcodeGen project definition
-Sources/App/
-  UZDoomTVApp.swift          entry point, save sync on background
-  LauncherView.swift         focus-engine launcher UI
-  WadLibrary.swift           discovery + orchestration model
-  DoomCloudStore.swift       CloudKit WAD/save store
-  FreedoomInstaller.swift    Freedoom download + unzip (ZIPFoundation)
-  BeamServer.swift           HTTP receiver for iPhone Safari uploads
-  EngineBridge.swift         stub — Phase 2 seam for the real engine
-Resources/                   drop personal WADs here for embedded testing
-ENGINE_INTEGRATION.md        Phase 2 guide
-```
+- The iPhone web server only runs while **Connect iPhone…** is on. Every request needs the random
+  key from that session's QR code, and it stops by itself after 15 minutes unless the phone is
+  being used as a controller. Traffic is plain HTTP (unencrypted), so it's meant for a home network.
+- Commercial IWADs (DOOM.WAD, DOOM2.WAD, …) must never be committed. `.gitignore` blocks `*.wad`
+  in any letter case and everything in `Resources/`. Files placed in `Resources/` are built into
+  the app, so only do that for builds you keep to yourself.

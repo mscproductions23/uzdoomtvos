@@ -11,7 +11,8 @@ app/*.pk3
 app/soundfonts/
 app/fm_banks/
 
-# Never commit commercial IWADs
-*.wad
-*.WAD
+# Never commit commercial IWADs or personal game files (any letter case)
+*.[wW][aA][dD]
+app/Resources/*
+!app/Resources/.gitkeep
 *.a

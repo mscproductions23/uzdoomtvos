@@ -77,7 +77,9 @@ The phone keeps its screen on while connected, reconnects by itself if the Wi-Fi
 
 1. In the launcher, choose **Connect iPhone…**.
 2. The TV shows a QR code. On your iPhone, on the **same Wi-Fi**, scan it with the Camera app and open the link.
-3. The page opens in Safari. The link contains a one-time key, so only someone who can see your TV can use it. The connection switches itself off after 15 minutes, unless the phone is being used as a controller.
+3. The page opens in Safari. The link contains a one-time key, so someone on your Wi-Fi can't just open the page without scanning the code. The connection switches itself off after 15 minutes, unless the phone is being used as a controller.
+
+   > The connection is plain HTTP, so it isn't encrypted. Use it on your home Wi-Fi, not on public or shared networks.
 4. Pick your files:
    - `.wad`, `.pk3`, `.ipk3` go into your game library.
    - `.zds` files go into your saves.
@@ -143,7 +145,7 @@ This downloads UZDoom and the libraries it needs, applies the Apple TV changes a
 2. Click **UZDoomTV** in the left sidebar, then open the **Signing & Capabilities** tab.
 3. Under **Team**, pick your Apple ID. (Add it in Xcode → Settings → Accounts if it isn't listed.)
 4. If Xcode complains about the bundle ID, change it to something unique, e.g. `com.yourname.uzdoomtv`.
-5. **iCloud:** with a paid developer account, Xcode may ask you to tick the iCloud container under **iCloud** on the same tab. With a free Apple ID, turn iCloud off first (see [Troubleshooting](#troubleshooting)).
+5. **iCloud:** the project uses the maintainer's iCloud container, which your team can't use. With a paid developer account, use your own: pick a container ID such as `iCloud.com.yourname.uzdoomtv` and put it in `app/UZDoomTV.entitlements` and `app/Sources/App/DoomCloudStore.swift`, then tick it under **iCloud** on the same tab. With a free Apple ID, turn iCloud off instead (see [Troubleshooting](#troubleshooting)).
 
 ### 4. Connect your Apple TV (first time only)
 
@@ -178,7 +180,7 @@ Then press **Run** in Xcode again.
 | The game list is greyed out | Connect a game controller, or connect your iPhone as one (see [Why a controller is required](#why-a-controller-is-required)). |
 | Controls feel wrong or inverted | Choose **Reset Controls to Default** in the launcher, then start the game again. |
 | "Personal development teams … do not support the iCloud capability" | Your Apple ID has no paid developer membership (or it lapsed). Either renew it, or in Xcode clear **Code Signing Entitlements** and remove `UZ_ICLOUD` from **Active Compilation Conditions** to build without iCloud. |
-| Xcode asks about the iCloud container, or says no container is selected | On **Signing & Capabilities → iCloud**, tick `iCloud.com.mscproductions.uzdoomtv` (or your own container after changing the bundle ID), or press **+** to create it. |
+| Xcode asks about the iCloud container, or says no container is selected | On **Signing & Capabilities → iCloud**, tick the container named in `app/UZDoomTV.entitlements`, or press **+** to create it. If you build under your own team, use your own container (see [step 3](#3-open-the-app-in-xcode)). |
 | "No XCFramework found … MoltenVK.xcframework" | The engine build hasn't finished. Run `./tvos/build-tvos.sh` from inside the `uzdoomtvos` folder. |
 | The build script stops with an error | It prints the name of a log file. Open it, or send the last lines with a bug report. |
 | Frame drops or stutter | Running from Xcode slows the game down (debugger attached). For real performance, stop it in Xcode and open UZDoom from the Apple TV Home screen. Also keep vsync off and the resolution at 1080p (see [Default settings](#default-settings)). Some stutter the first time new effects appear is shaders compiling; this gets better on later runs. |
