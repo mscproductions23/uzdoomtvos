@@ -1,10 +1,10 @@
 # UZDoom for Apple TV
 
-Play classic Doom on your Apple TV with a game controller.
+Play classic Doom on your Apple TV with a game controller, or with your iPhone as a touchscreen controller.
 
 This is a port of [UZDoom](https://github.com/UZDoom/UZDoom), a modern Doom engine, to tvOS. It comes with a simple launcher: pick a game, press play, and you're in.
 
-> **Status: early testing.** The game runs on a real Apple TV, and graphics, sound and gameplay work. Some rough edges remain; see [Known issues](#known-issues). There is no one-tap install yet. For now you build it yourself on a Mac (steps below). A TestFlight link is planned.
+> **Status: early testing.** The game runs at 60 fps on a real Apple TV 4K, with working graphics, sound, saves and controls. Some rough edges remain; see [Known issues](#known-issues). There is no one-tap install yet. For now you build it yourself on a Mac (steps below). A TestFlight link is planned.
 
 ---
 
@@ -32,6 +32,7 @@ To pair one, open **Settings → Remotes and Devices → Bluetooth** on the Appl
 - **Pauses properly** when you press the TV button to go back to the Home screen.
 - **iCloud sync** of games and saves between your devices, with an on/off switch in the launcher. Everything also works offline with it off.
 - **iPhone as a controller**: a touchscreen gamepad in Safari, no app needed.
+- **Tuned for Apple TV**: new installs start with settings that hold 60 fps. Your own changes are saved automatically.
 
 ---
 
@@ -56,7 +57,7 @@ Xbox, PlayStation and other MFi controllers all use the same layout:
 
 B and X (○ and □) are free for you to assign.
 
-- **See and test it:** in the launcher, choose **Controls & Controller Test**. The layout lights up as you press each button or move a stick. Press B or Menu twice to leave.
+- **See and test it:** in the launcher, choose **Controls & Controller Test**. The layout lights up as you press each button or move a stick. **Hold** B or Menu to leave.
 - **Change a button:** start a game and open **Options → Customize Controls**.
 - **Start over:** choose **Reset Controls to Default** in the launcher.
 
@@ -68,7 +69,7 @@ No controller? Use your iPhone:
 2. Tap **🎮 Use this phone as a controller**, then turn the phone sideways.
 3. Left thumb moves (the stick appears wherever you touch), right thumb looks. The buttons are FIRE, USE and JUMP, plus Menu, Back, Map and weapon switching along the top.
 
-The phone keeps its screen on while connected, and the connection stays open as long as you're playing.
+The phone keeps its screen on while connected, reconnects by itself if the Wi-Fi drops, and the connection stays open as long as you're playing. A real controller and the phone can be used at the same time. Only one phone can be the controller at a time.
 
 ---
 
@@ -76,7 +77,7 @@ The phone keeps its screen on while connected, and the connection stays open as 
 
 1. In the launcher, choose **Connect iPhone…**.
 2. The TV shows a QR code. On your iPhone, on the **same Wi-Fi**, scan it with the Camera app and open the link.
-3. The page opens in Safari. The link contains a one-time key, so only someone who can see your TV can use it. Receiving switches itself off after 15 minutes.
+3. The page opens in Safari. The link contains a one-time key, so only someone who can see your TV can use it. The connection switches itself off after 15 minutes, unless the phone is being used as a controller.
 4. Pick your files:
    - `.wad`, `.pk3`, `.ipk3` go into your game library.
    - `.zds` files go into your saves.
@@ -96,6 +97,23 @@ Saves are kept on the Apple TV. They survive updates, but **deleting the app era
 3. To restore, open the same page and send the backup `.zip` (or single `.zds` saves) with **Send to Apple TV**. No need to unzip; the Apple TV unpacks it.
 
 With **iCloud Sync** switched on in the launcher, saves also sync through your iCloud account: they download when you start a game and upload when you leave the app. Switch it off to keep everything on the Apple TV only.
+
+---
+
+## Default settings
+
+A new install starts with settings tuned on an Apple TV 4K (2nd generation) to hold 60 fps:
+
+| Setting | Value | Why |
+|---|---|---|
+| Renderer | Software | Holds 60 fps and avoids the hardware renderer's texture problems |
+| Resolution | 1920 × 1080, smoothly scaled | Higher resolutions drop below 60 fps on this chip |
+| Vsync | Off | Turning it on makes the frame rate drop sharply |
+| Always run | On | |
+| Texture filter | None | The classic look. Smooth filtering breaks textures in the hardware renderer |
+| Screen size / HUD | Full-screen view, modern HUD and border scaling | The "classic" border scaling draws broken stripes |
+
+Change anything in the game's **Options** menu. Your settings are saved automatically, even if you leave with the TV button.
 
 ---
 
@@ -125,6 +143,7 @@ This downloads UZDoom and the libraries it needs, applies the Apple TV changes a
 2. Click **UZDoomTV** in the left sidebar, then open the **Signing & Capabilities** tab.
 3. Under **Team**, pick your Apple ID. (Add it in Xcode → Settings → Accounts if it isn't listed.)
 4. If Xcode complains about the bundle ID, change it to something unique, e.g. `com.yourname.uzdoomtv`.
+5. **iCloud:** with a paid developer account, Xcode may ask you to tick the iCloud container under **iCloud** on the same tab. With a free Apple ID, turn iCloud off first (see [Troubleshooting](#troubleshooting)).
 
 ### 4. Connect your Apple TV (first time only)
 
@@ -159,9 +178,11 @@ Then press **Run** in Xcode again.
 | The game list is greyed out | Connect a game controller, or connect your iPhone as one (see [Why a controller is required](#why-a-controller-is-required)). |
 | Controls feel wrong or inverted | Choose **Reset Controls to Default** in the launcher, then start the game again. |
 | "Personal development teams … do not support the iCloud capability" | Your Apple ID has no paid developer membership (or it lapsed). Either renew it, or in Xcode clear **Code Signing Entitlements** and remove `UZ_ICLOUD` from **Active Compilation Conditions** to build without iCloud. |
+| Xcode asks about the iCloud container, or says no container is selected | On **Signing & Capabilities → iCloud**, tick `iCloud.com.mscproductions.uzdoomtv` (or your own container after changing the bundle ID), or press **+** to create it. |
 | "No XCFramework found … MoltenVK.xcframework" | The engine build hasn't finished. Run `./tvos/build-tvos.sh` from inside the `uzdoomtvos` folder. |
 | The build script stops with an error | It prints the name of a log file. Open it, or send the last lines with a bug report. |
-| Frame drops or stutter | Running from Xcode slows the game down (debugger attached). For real performance, stop it in Xcode and open UZDoom from the Apple TV Home screen. Some stutter the first time new effects appear is shaders compiling; this gets better on later runs. |
+| Frame drops or stutter | Running from Xcode slows the game down (debugger attached). For real performance, stop it in Xcode and open UZDoom from the Apple TV Home screen. Also keep vsync off and the resolution at 1080p (see [Default settings](#default-settings)). Some stutter the first time new effects appear is shaders compiling; this gets better on later runs. |
+| The phone controller says "Reconnecting…" | Make sure the phone is on the same Wi-Fi and the TV still shows the QR code (**Connect iPhone…**). If it doesn't recover, scan the QR code again: each connection uses a new key. |
 | "Fetching debug symbols" takes forever | Wait up to 30 minutes. If it's still stuck, quit Xcode, restart the Apple TV and try again. |
 
 For more build options (rebuilding single parts, custom settings), see [`tvos/README.md`](tvos/README.md).
@@ -174,13 +195,15 @@ For more build options (rebuilding single parts, custom settings), see [`tvos/RE
 - **Smeared textures with the hardware renderer.** With the hardware (GPU) renderer and texture filtering on, distant walls smear into stripes and floors turn flat grey. New installs use the software renderer, which holds 60 fps on an Apple TV 4K and doesn't have this problem.
 - **Striped status-bar border with "classic" border scaling.** The pattern beside the status bar breaks up into stripes. New installs use the non-classic scaling, which draws correctly.
 - The pink title screen (a UZDoom bug on Apple GPUs, [UZDoom#1116](https://github.com/UZDoom/UZDoom/issues/1116)) is fixed by a workaround in this build.
+- **Above 1080p the frame rate drops.** The software renderer draws on the CPU, and the Apple TV 4K (2nd gen, A12) holds 60 fps at 1080p but not at 1440p or 4K. A 4K TV still looks fine, because the Apple TV scales the picture up.
+- **The iPhone controller has a little lag** compared with a real controller, because it goes over Wi-Fi.
 - No TestFlight or one-tap install yet; building on a Mac is currently the only way.
 
 ---
 
 ## How it works (for the curious)
 
-- `app/`: the Apple TV launcher, written in SwiftUI. It finds your games, handles iPhone uploads and starts the engine.
+- `app/`: the Apple TV launcher, written in SwiftUI. It finds your games, runs the small web server for the iPhone (files, save backups and the touch controller), syncs with iCloud, and starts the engine.
 - `tvos/build-tvos.sh`: one script that downloads UZDoom 4.14.3 and its libraries (SDL2, ZMusic, OpenAL, libvpx, MoltenVK), applies the patches and builds `UZDoomEngine.framework`.
 - `tvos/patches/`: the small changes needed to make each library work on Apple TV.
 - Graphics go through **Vulkan → MoltenVK → Metal**, Apple's graphics system.
