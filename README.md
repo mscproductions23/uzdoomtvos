@@ -137,6 +137,7 @@ Then press **Run** in Xcode again.
 | "Personal development teams … do not support the iCloud capability" | You're using a free Apple ID. The current test build already has iCloud switched off; run `git pull` to get it. |
 | "No XCFramework found … MoltenVK.xcframework" | The engine build hasn't finished. Run `./tvos/build-tvos.sh` from inside the `uzdoomtvos` folder. |
 | The build script stops with an error | It prints the name of a log file. Open it, or send the last lines with a bug report. |
+| Frame drops or stutter | Running from Xcode slows the game down (debugger attached). For real performance, stop it in Xcode and open UZDoom from the Apple TV Home screen. Some stutter the first time new effects appear is shaders compiling; this gets better on later runs. |
 | "Fetching debug symbols" takes forever | Wait up to 30 minutes. If it's still stuck, quit Xcode, restart the Apple TV and try again. |
 
 For more build options (rebuilding single parts, custom settings), see [`tvos/README.md`](tvos/README.md).

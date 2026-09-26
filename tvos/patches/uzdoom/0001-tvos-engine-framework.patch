@@ -1076,7 +1076,7 @@ index 0000000..302aa11
 +	return NULL;
 +}
 diff --git a/src/common/platform/posix/sdl/i_input.cpp b/src/common/platform/posix/sdl/i_input.cpp
-index 37807d5..d4c5bc3 100644
+index 37807d5..a62cccf 100644
 --- a/src/common/platform/posix/sdl/i_input.cpp
 +++ b/src/common/platform/posix/sdl/i_input.cpp
 @@ -46,6 +46,9 @@
@@ -1089,7 +1089,7 @@ index 37807d5..d4c5bc3 100644
  #include "i_interface.h"
  
  
-@@ -224,6 +227,28 @@ static void I_CheckNativeMouse ()
+@@ -224,6 +227,31 @@ static void I_CheckNativeMouse ()
  	}
  }
  
@@ -1101,7 +1101,10 @@ index 37807d5..d4c5bc3 100644
 +{
 +	S_SetSoundPaused(0);
 +	if (screen != nullptr)
++	{
 +		screen->WaitForCommands(false);
++		screen->SaveShaderCache(); // tvOS usually kills backgrounded apps without a clean exit
++	}
 +
 +	SDL_Event ev;
 +	while (SDL_WaitEvent(&ev))
@@ -1118,7 +1121,7 @@ index 37807d5..d4c5bc3 100644
  void MessagePump (const SDL_Event &sev)
  {
  	static int lastx = 0, lasty = 0;
-@@ -240,6 +265,12 @@ void MessagePump (const SDL_Event &sev)
+@@ -240,6 +268,12 @@ void MessagePump (const SDL_Event &sev)
  		ProcessSDLWindowEvent(sev.window);
  		break;
  
@@ -1301,6 +1304,81 @@ index 0d48b75..197db74 100644
  {
  	if (screen != NULL)
  	{
+diff --git a/src/common/rendering/v_video.h b/src/common/rendering/v_video.h
+index ed428ee..4341035 100644
+--- a/src/common/rendering/v_video.h
++++ b/src/common/rendering/v_video.h
+@@ -258,6 +258,9 @@ public:
+ 	virtual void SetSceneRenderTarget(bool useSSAO) {}
+ 	virtual void UpdateShadowMap() {}
+ 	virtual void WaitForCommands(bool finish) {}
++#ifdef UZ_TVOS
++	virtual void SaveShaderCache() {}
++#endif
+ 	virtual void SetSaveBuffers(bool yes) {}
+ 	virtual void ImageTransitionScene(bool unknown) {}
+ 	virtual void CopyScreenToBuffer(int width, int height, uint8_t* buffer)	{ memset(buffer, 0, width* height); }
+diff --git a/src/common/rendering/vulkan/renderer/vk_renderpass.cpp b/src/common/rendering/vulkan/renderer/vk_renderpass.cpp
+index 5229335..432e703 100644
+--- a/src/common/rendering/vulkan/renderer/vk_renderpass.cpp
++++ b/src/common/rendering/vulkan/renderer/vk_renderpass.cpp
+@@ -67,6 +67,11 @@ VkRenderPassManager::VkRenderPassManager(VulkanRenderDevice* fb) : fb(fb)
+ }
+ 
+ VkRenderPassManager::~VkRenderPassManager()
++{
++	SaveCache();
++}
++
++void VkRenderPassManager::SaveCache()
+ {
+ 	try
+ 	{
+diff --git a/src/common/rendering/vulkan/renderer/vk_renderpass.h b/src/common/rendering/vulkan/renderer/vk_renderpass.h
+index a1f8ca3..c2f81b0 100644
+--- a/src/common/rendering/vulkan/renderer/vk_renderpass.h
++++ b/src/common/rendering/vulkan/renderer/vk_renderpass.h
+@@ -126,6 +126,7 @@ class VkRenderPassManager
+ public:
+ 	VkRenderPassManager(VulkanRenderDevice* fb);
+ 	~VkRenderPassManager();
++	void SaveCache();
+ 
+ 	void RenderBuffersReset();
+ 
+diff --git a/src/common/rendering/vulkan/system/vk_renderdevice.cpp b/src/common/rendering/vulkan/system/vk_renderdevice.cpp
+index 91686de..e59851d 100644
+--- a/src/common/rendering/vulkan/system/vk_renderdevice.cpp
++++ b/src/common/rendering/vulkan/system/vk_renderdevice.cpp
+@@ -491,6 +491,14 @@ void VulkanRenderDevice::WaitForCommands(bool finish)
+ 	mCommands->WaitForCommands(finish);
+ }
+ 
++#ifdef UZ_TVOS
++void VulkanRenderDevice::SaveShaderCache()
++{
++	if (mRenderPassManager)
++		mRenderPassManager->SaveCache();
++}
++#endif
++
+ unsigned int VulkanRenderDevice::GetLightBufferBlockSize() const
+ {
+ 	return mLights->GetBlockSize();
+diff --git a/src/common/rendering/vulkan/system/vk_renderdevice.h b/src/common/rendering/vulkan/system/vk_renderdevice.h
+index 6b11536..9b340e6 100644
+--- a/src/common/rendering/vulkan/system/vk_renderdevice.h
++++ b/src/common/rendering/vulkan/system/vk_renderdevice.h
+@@ -90,6 +90,9 @@ public:
+ 	void Draw2D() override;
+ 
+ 	void WaitForCommands(bool finish) override;
++#ifdef UZ_TVOS
++	void SaveShaderCache() override;
++#endif
+ 
+ 	bool RaytracingEnabled();
+ 
 diff --git a/src/common/thirdparty/richpresence.cpp b/src/common/thirdparty/richpresence.cpp
 index a8d8e81..c4bc7a6 100644
 --- a/src/common/thirdparty/richpresence.cpp
