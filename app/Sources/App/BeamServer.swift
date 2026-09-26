@@ -17,10 +17,14 @@ final class BeamServer {
     private var onFileReceived: (() -> Void)?
     private let queue = DispatchQueue(label: "beam-server")
     private var accessKey = ""
+    private var padListener: NWListener?
+    private var padConnection: NWConnection?          // the one authenticated phone controller
+    private var onPadChanged: ((Bool) -> Void)?
 
     /// Starts the server; returns the URL to show on screen, e.g. "http://192.168.1.40:8080/?key=…"
-    func start(onFileReceived: @escaping () -> Void) throws -> String {
+    func start(onFileReceived: @escaping () -> Void, onPadChanged: @escaping (Bool) -> Void) throws -> String {
         self.onFileReceived = onFileReceived
+        self.onPadChanged = onPadChanged
         let listener = try NWListener(using: .tcp, on: 8080)
         listener.newConnectionHandler = { [weak self] connection in
             self?.accept(connection)
@@ -30,6 +34,25 @@ final class BeamServer {
         queue.sync { accessKey = key }   // requests read accessKey on `queue`
         listener.start(queue: queue)
         self.listener = listener
+
+        let wsParams = NWParameters.tcp
+        let wsOptions = NWProtocolWebSocket.Options()
+        wsOptions.autoReplyPing = true
+        wsParams.defaultProtocolStack.applicationProtocols.insert(wsOptions, at: 0)
+        let padListener: NWListener
+        do {
+            padListener = try NWListener(using: wsParams, on: 8081)
+        } catch {
+            stop()   // don't leave the file server running without its controller port
+            throw error
+        }
+        padListener.newConnectionHandler = { [weak self] connection in
+            connection.start(queue: self?.queue ?? .main)
+            self?.receivePad(on: connection, authenticated: false)
+        }
+        padListener.start(queue: queue)
+        self.padListener = padListener
+
         let ip = Self.localIPAddress() ?? "<this-apple-tv's-IP>"
         return "http://\(ip):8080/?key=\(key)"
     }
@@ -39,6 +62,18 @@ final class BeamServer {
         listener = nil
         connections.values.forEach { $0.cancel() }
         connections.removeAll()
+        padListener?.cancel()
+        padListener = nil
+        var wasConnected = false
+        queue.sync {   // padConnection is only touched on `queue`
+            wasConnected = padConnection != nil
+            padConnection?.cancel()
+            padConnection = nil
+            uzdoom_set_touch_pad(nil, 0, 0)
+        }
+        if wasConnected {
+            DispatchQueue.main.async { [weak self] in self?.onPadChanged?(false) }
+        }
         queue.sync { accessKey = "" }
     }
 
@@ -153,6 +188,9 @@ final class BeamServer {
                         body: Data(error.localizedDescription.utf8))
             }
 
+        case ("GET", "/pad"):
+            respond(connection, status: "200 OK", contentType: "text/html; charset=utf-8", body: Data(PadPage.html.utf8))
+
         default:
             respond(connection, status: "404 Not Found", contentType: "text/plain", body: Data("Not found".utf8))
         }
@@ -176,6 +214,56 @@ final class BeamServer {
     private func close(_ connection: NWConnection) {
         connection.cancel()
         connections[ObjectIdentifier(connection)] = nil
+    }
+
+    // MARK: Touch pad (WebSocket, port 8081)
+
+    /// First text message must be the access key; after that, messages are JSON
+    /// {"a":[lx,ly,rx,ry,lt,rt],"b":buttons}. Runs on `queue`.
+    private func receivePad(on connection: NWConnection, authenticated: Bool) {
+        connection.receiveMessage { [weak self] data, _, _, error in
+            guard let self else { return }
+            if error != nil || data == nil {
+                self.dropPad(connection)
+                return
+            }
+            let text = String(decoding: data ?? Data(), as: UTF8.self)
+            if !authenticated {
+                guard !self.accessKey.isEmpty, Self.constantTimeEquals(text, self.accessKey) else {
+                    connection.cancel()
+                    return
+                }
+                // One phone at a time: a new controller replaces the old one.
+                if let old = self.padConnection, old !== connection { old.cancel() }
+                self.padConnection = connection
+                self.sendPadText("ok", on: connection)
+                DispatchQueue.main.async { self.onPadChanged?(true) }
+                self.receivePad(on: connection, authenticated: true)
+                return
+            }
+            if connection === self.padConnection,
+               let obj = try? JSONSerialization.jsonObject(with: data ?? Data()) as? [String: Any],
+               let a = obj["a"] as? [Double], a.count == 6 {
+                let axes = a.map { Float(max(-1, min(1, $0))) }
+                let buttons = (obj["b"] as? Int).map { UInt32(truncatingIfNeeded: $0) } ?? 0
+                axes.withUnsafeBufferPointer { uzdoom_set_touch_pad($0.baseAddress, buttons, 1) }
+            }
+            self.receivePad(on: connection, authenticated: true)
+        }
+    }
+
+    private func sendPadText(_ text: String, on connection: NWConnection) {
+        let meta = NWProtocolWebSocket.Metadata(opcode: .text)
+        let context = NWConnection.ContentContext(identifier: "pad", metadata: [meta])
+        connection.send(content: Data(text.utf8), contentContext: context, isComplete: true, completion: .idempotent)
+    }
+
+    private func dropPad(_ connection: NWConnection) {
+        connection.cancel()
+        guard connection === padConnection else { return }
+        padConnection = nil
+        uzdoom_set_touch_pad(nil, 0, 0)   // release everything the phone was holding
+        DispatchQueue.main.async { [weak self] in self?.onPadChanged?(false) }
     }
 
     // MARK: Helpers
@@ -246,6 +334,7 @@ final class BeamServer {
     </head><body>
     <h1>UZDoom TV</h1>
     <p class="hint">Keep this page open on the same Wi-Fi as the Apple TV.</p>
+    <p><a class="button" id="padlink" href="/pad">🎮 Use this phone as a controller</a></p>
 
     <h2>Send files to the Apple TV</h2>
     <p>Pick .wad / .pk3 games or .zds saves:</p>
@@ -261,6 +350,7 @@ final class BeamServer {
     <script>
     const KEY = new URLSearchParams(location.search).get('key') || '';
     const withKey = (p) => p + '?key=' + encodeURIComponent(KEY);
+    document.getElementById('padlink').href = withKey('/pad');
     async function send(){
       const log = document.getElementById('log');
       for (const f of document.getElementById('files').files){

@@ -16,6 +16,7 @@ final class WadLibrary: ObservableObject {
     @Published var games: [GameEntry] = []
     @Published var busyMessage: String? = nil
     @Published var beamAddress: String? = nil
+    @Published private(set) var phonePadConnected = false
     @Published var lastError: String? = nil
 
     var lastLaunchedIwad: String? {
@@ -122,20 +123,29 @@ final class WadLibrary: ObservableObject {
         if beamAddress != nil {
             beamServer.stop()
             beamAddress = nil
+            phonePadConnected = false
             beamTimeout?.cancel()
             beamTimeout = nil
             Task { await refresh() }
         } else {
             do {
-                let address = try beamServer.start { [weak self] in
+                let address = try beamServer.start(onFileReceived: { [weak self] in
                     Task { await self?.refresh() }
-                }
+                }, onPadChanged: { [weak self] connected in
+                    self?.phonePadConnected = connected
+                })
                 beamAddress = address
                 beamTimeout?.cancel()
                 beamTimeout = Task { [weak self] in
-                    try? await Task.sleep(for: .seconds(15 * 60))   // don't leave the receiver open by accident
-                    guard !Task.isCancelled, let self, self.beamAddress != nil else { return }
-                    self.toggleBeam()
+                    // Don't leave the receiver open by accident, but keep it while a phone is the controller.
+                    while !Task.isCancelled {
+                        try? await Task.sleep(for: .seconds(15 * 60))
+                        guard !Task.isCancelled, let self, self.beamAddress != nil else { return }
+                        if !self.phonePadConnected {
+                            self.toggleBeam()
+                            return
+                        }
+                    }
                 }
             } catch {
                 lastError = "Could not start receiver: \(error.localizedDescription)"

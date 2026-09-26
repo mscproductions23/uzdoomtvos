@@ -51,7 +51,7 @@ enum DoomCloudError: LocalizedError {
         case .notSignedIntoiCloud:
             return "This Apple TV is not signed into iCloud."
         case .iCloudDisabled:
-            return "iCloud sync is not enabled in this build."
+            return "iCloud sync is turned off."
         case .recordMissingAsset(let name):
             return "Cloud record for \(name) has no file attached."
         case .wadNotFound(let name):
@@ -95,7 +95,15 @@ actor DoomCloudStore {
 
     // MARK: Setup
 
+    /// The launcher's iCloud Sync switch. Off: WADs and saves stay on this Apple TV only.
+    nonisolated static var syncEnabled: Bool {
+        get { UserDefaults.standard.object(forKey: syncEnabledKey) as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: syncEnabledKey) }
+    }
+    nonisolated static let syncEnabledKey = "iCloudSyncEnabled"
+
     private func ensureZone() async throws {
+        guard Self.syncEnabled else { throw DoomCloudError.iCloudDisabled }
         guard !zoneReady else { return }
         guard let container else { throw DoomCloudError.iCloudDisabled }
         // Verify iCloud account before doing anything else.
