@@ -80,6 +80,7 @@ The phone keeps its screen on while connected, and the connection stays open as 
 4. Pick your files:
    - `.wad`, `.pk3`, `.ipk3` go into your game library.
    - `.zds` files go into your saves.
+   - A `.zip` (such as a saves backup) is unpacked: saves go to your saves, and games to your library.
 5. Choose **Disconnect iPhone** when you're done. Your games now appear in the list.
 
 > **Please only use game files you own.** The commercial Doom games are not included and must never be uploaded to this repository.
@@ -92,7 +93,7 @@ Saves are kept on the Apple TV. They survive updates, but **deleting the app era
 
 1. In the launcher, choose **Connect iPhone…** and scan the QR code with your iPhone (same Wi-Fi).
 2. Under **Back up your saves**, tap a save to download it, or **Download all saves (.zip)**.
-3. To restore, open the same page and send the `.zds` files back with **Send to Apple TV**. (Unzip the backup first in the Files app.)
+3. To restore, open the same page and send the backup `.zip` (or single `.zds` saves) with **Send to Apple TV**. No need to unzip; the Apple TV unpacks it.
 
 With **iCloud Sync** switched on in the launcher, saves also sync through your iCloud account: they download when you start a game and upload when you leave the app. Switch it off to keep everything on the Apple TV only.
 
