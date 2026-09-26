@@ -1,3 +1,5 @@
+> **Historical notes (July 2026).** This was the plan before the port worked. It is superseded by `tvos/build-tvos.sh`, the patches in `tvos/patches/` and [NOTES.md](../NOTES.md), and some advice below (reusing baumhoto's prebuilt libraries, `--allow-multiple-definition`) is not what the project does now.
+
 # Phase 2: Building UZDoom for tvOS — verified findings (July 2026)
 
 Everything below was confirmed by actually cloning and compiling the code

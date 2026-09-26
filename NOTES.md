@@ -101,7 +101,7 @@ TNT.WAD, PLUTONIA.WAD) must never be committed; `.gitignore` covers `*.wad`.
 
 ## Signing / iCloud
 
-Team `YOURTEAMID` ("mscproductions") is the paid Apple Developer Program team. iCloud is ON:
+The project's `DEVELOPMENT_TEAM` is a paid Apple Developer Program team. iCloud is ON:
 the target signs with `UZDoomTV.entitlements` (container `iCloud.com.mscproductions.uzdoomtv`)
 and sets `UZ_ICLOUD`. The launcher's **iCloud Sync** switch (`DoomCloudStore.syncEnabled`,
 UserDefaults `iCloudSyncEnabled`, default on) makes every cloud call report "disabled" when
