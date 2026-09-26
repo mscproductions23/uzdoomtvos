@@ -7,32 +7,37 @@ import Foundation
 enum PadPage {
     static let html = #"""
     <!doctype html><html><head>
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>UZDoom Controller</title>
     <style>
+    /* Sizes follow the visible height (vh), so the layout fits even with the browser's toolbars showing. */
     html,body{margin:0;height:100%;background:#0c0c0c;color:#eee;font-family:-apple-system,sans-serif;
       overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
     #pad{position:fixed;inset:0}
     .zone{position:absolute;top:0;bottom:0}
     #left{left:0;width:50%} #right{right:0;width:50%}
-    .top{position:absolute;top:max(10px,env(safe-area-inset-top));left:0;right:0;display:flex;justify-content:space-between;
-      padding:0 max(14px,env(safe-area-inset-left));pointer-events:none}
-    .top .group{display:flex;gap:10px}
-    .btn{pointer-events:auto;border:2px solid #444;background:#1c1c1c;color:#ddd;border-radius:14px;
-      font-weight:700;display:flex;align-items:center;justify-content:center;touch-action:none}
+    .top{position:absolute;top:max(2.5vh,env(safe-area-inset-top));left:max(3vw,env(safe-area-inset-left));
+      right:max(3vw,env(safe-area-inset-right));display:flex;align-items:center;gap:2vw;pointer-events:none}
+    .top .group{display:flex;gap:1.5vw;flex:none}
+    .btn{pointer-events:auto;border:2px solid #444;background:#1c1c1c;color:#ddd;border-radius:3.5vh;
+      font-weight:700;display:flex;align-items:center;justify-content:center;touch-action:none;white-space:nowrap}
     .btn.on{background:#e33;border-color:#e33;color:#fff}
-    .small{min-width:64px;height:44px;padding:0 12px;font-size:15px}
-    #fire{position:absolute;right:max(24px,env(safe-area-inset-right));bottom:36px;width:118px;height:118px;border-radius:59px;font-size:20px}
-    #use{position:absolute;right:calc(max(24px,env(safe-area-inset-right)) + 132px);bottom:30px;width:84px;height:84px;border-radius:42px;font-size:16px}
-    #jump{position:absolute;right:calc(max(24px,env(safe-area-inset-right)) + 40px);bottom:170px;width:74px;height:74px;border-radius:37px;font-size:14px}
+    .small{height:clamp(30px,12vh,46px);padding:0 clamp(8px,2.2vw,16px);font-size:clamp(12px,4.3vh,16px)}
+    .round{position:absolute;border-radius:50%}
+    #fire{right:max(4vw,env(safe-area-inset-right));bottom:7vh;width:34vh;height:34vh;font-size:6.5vh}
+    #use{right:calc(max(4vw,env(safe-area-inset-right)) + 38vh);bottom:4vh;width:25vh;height:25vh;font-size:5vh}
+    #jump{right:calc(max(4vw,env(safe-area-inset-right)) + 29vh);bottom:38vh;width:20vh;height:20vh;font-size:4.2vh}
     .stick{position:absolute;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:60px;border:2px solid #555;display:none}
     .knob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:25px;background:#888}
-    .label{position:absolute;bottom:14px;color:#555;font-size:13px;pointer-events:none}
-    #lefthint{left:max(18px,env(safe-area-inset-left))} #righthint{left:calc(50% + 12px)}
-    #status{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;font-size:13px;color:#999;pointer-events:none}
+    .label{position:absolute;bottom:3vh;color:#555;font-size:clamp(11px,4vh,14px);pointer-events:none}
+    #lefthint{left:max(4vw,env(safe-area-inset-left))} #righthint{left:calc(50% + 3vw)}
+    #status{flex:1;min-width:0;text-align:center;font-size:clamp(11px,4vh,14px);color:#999;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #status.ok{color:#5c5}
     #rotate{display:none;position:fixed;inset:0;background:#0c0c0c;align-items:center;justify-content:center;
-      text-align:center;font-size:20px;padding:30px}
+      text-align:center;font-size:20px;padding:30px;line-height:1.4}
     @media (orientation:portrait){#rotate{display:flex}}
     </style></head><body>
     <div id="pad">
@@ -46,17 +51,17 @@ enum PadPage {
           <div class="btn small" data-bit="13">Back</div>
           <div class="btn small" data-bit="0">Map</div>
         </div>
+        <div id="status">Connecting…</div>
         <div class="group">
           <div class="btn small" data-bit="8">◀ Weapon</div>
           <div class="btn small" data-bit="9">Weapon ▶</div>
         </div>
       </div>
-      <div class="btn" id="use" data-bit="12">USE</div>
-      <div class="btn" id="jump" data-bit="15">JUMP</div>
-      <div class="btn" id="fire" data-fire="1">FIRE</div>
+      <div class="btn round" id="use" data-bit="12">USE</div>
+      <div class="btn round" id="jump" data-bit="15">JUMP</div>
+      <div class="btn round" id="fire" data-fire="1">FIRE</div>
       <div class="label" id="lefthint">Move</div>
       <div class="label" id="righthint">Look</div>
-      <div id="status">Connecting…</div>
     </div>
     <div id="rotate">Turn your phone sideways to use it as a controller.</div>
     <script>
@@ -130,10 +135,10 @@ enum PadPage {
       ready = false;
       ws = new WebSocket(`ws://${location.hostname}:8081/`);
       ws.onopen = () => ws.send(KEY);
-      ws.onmessage = e => { if (e.data === 'ok') { ready = true; dirty = true; status.textContent = 'Connected'; } };
+      ws.onmessage = e => { if (e.data === 'ok') { ready = true; dirty = true; status.textContent = 'Connected'; status.className = 'ok'; } };
       ws.onclose = () => {
         ready = false;
-        status.textContent = 'Disconnected – retrying… (if it keeps failing, scan the QR code on the TV again)';
+        status.textContent = 'Reconnecting… (rescan the QR code if this stays)'; status.className = '';
         setTimeout(connect, 2000);
       };
       ws.onerror = () => ws.close();
