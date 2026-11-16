@@ -116,6 +116,19 @@ index 1ba030a..cffb26f 100644
  add_subdirectory( libraries/lzma )
  add_subdirectory( tools )
  add_subdirectory( wadsrc )
+diff --git a/libraries/ZVulkan/CMakeLists.txt b/libraries/ZVulkan/CMakeLists.txt
+index 8bea413..b3bc66e 100644
+--- a/libraries/ZVulkan/CMakeLists.txt
++++ b/libraries/ZVulkan/CMakeLists.txt
+@@ -194,7 +194,7 @@ if(WIN32)
+ 	list(APPEND ZVULKAN_SOURCES ${ZVULKAN_WIN32_SOURCES})
+ 	add_definitions(-DUNICODE -D_UNICODE)
+ else()
+-	if(APPLE)
++	if(APPLE AND NOT UZ_TVOS) # tvOS loads MoltenVK at runtime through volk
+ 		find_package(Vulkan REQUIRED COMPONENTS MoltenVK)
+ 		list(APPEND ZVULKAN_LIBS Vulkan::Vulkan)
+ 	elseif(NOT HAIKU AND NOT CMAKE_SYSTEM_NAME MATCHES "FreeBSD|NetBSD|OpenBSD|DragonFly")
 diff --git a/libraries/ZVulkan/src/volk/volk.c b/libraries/ZVulkan/src/volk/volk.c
 index 67f85c7..91e8f8b 100644
 --- a/libraries/ZVulkan/src/volk/volk.c
