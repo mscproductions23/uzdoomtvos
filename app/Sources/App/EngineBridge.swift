@@ -66,6 +66,39 @@ final class EngineBridge {
         }
     }
 
+    /// Developer override: KEY=VALUE lines from Caches/engine.env are exported before the engine starts.
+    private static func applyEnvOverrides(from cachesDirURL: URL) {
+        let envURL = cachesDirURL.appendingPathComponent("engine.env")
+        guard let content = try? String(contentsOf: envURL, encoding: .utf8) else { return }
+
+        for line in content.split(whereSeparator: { $0.isNewline }) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty || trimmed.hasPrefix("#") { continue }
+
+            let parts = trimmed.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+            guard parts.count == 2 else { continue }
+
+            let key = parts[0].trimmingCharacters(in: .whitespaces)
+            let value = parts[1].trimmingCharacters(in: .whitespaces)
+            guard !key.isEmpty else { continue }
+
+            setenv(key, value, 1)
+            print("[EngineBridge] env override: \(key)=\(value)")
+        }
+    }
+
+    /// Developer override: whitespace-separated arguments from Caches/engine.args are appended to the engine args.
+    private static func extraEngineArgs(from cachesDirURL: URL) -> [String] {
+        let argsURL = cachesDirURL.appendingPathComponent("engine.args")
+        guard let content = try? String(contentsOf: argsURL, encoding: .utf8) else { return [] }
+
+        let extra = content.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        if !extra.isEmpty {
+            print("[EngineBridge] extra engine args: \(extra.joined(separator: " "))")
+        }
+        return extra
+    }
+
     func launch(iwad: URL, saveDirectory: URL) {
         guard !isRunning else { return }
         isRunning = true
@@ -117,6 +150,7 @@ final class EngineBridge {
         if UserDefaults.standard.bool(forKey: Self.showFrameRateKey) {
             args += ["+vid_fps", "1"]
         }
+        args += Self.extraEngineArgs(from: cachesDirURL)
 
         // Set SDL_VULKAN_LIBRARY to embedded MoltenVK so both SDL and engine use it.
         let moltenVKPath = bundle.privateFrameworksURL!.appendingPathComponent("MoltenVK.framework/MoltenVK").path
@@ -124,6 +158,7 @@ final class EngineBridge {
             print("[EngineBridge] Warning: MoltenVK not found at \(moltenVKPath)")
         }
         setenv("SDL_VULKAN_LIBRARY", moltenVKPath, 1)
+        Self.applyEnvOverrides(from: cachesDirURL)
 
         print("[EngineBridge] Launching UZDoom")
         print("  iwad:    \(iwad.path)")
