@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/Apple%20TV-4K-22e2f8" alt="Apple TV 4K">
   <img src="https://img.shields.io/badge/UZDoom-5.0.3-1f7784" alt="UZDoom 5.0.3">
   <img src="https://img.shields.io/badge/60%20fps-1080p-2ea44f" alt="60 fps at 1080p">
-  <img src="https://img.shields.io/badge/version-0.5.0-orange" alt="Version 0.5.0">
+  <img src="https://img.shields.io/badge/version-0.6.0-orange" alt="Version 0.6.0">
   <img src="https://img.shields.io/badge/install-sideload-8a2be2" alt="Install: sideload">
   <img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License: GPL-3.0">
 </p>
@@ -25,9 +25,7 @@ Play classic Doom on your Apple TV with a game controller, or with your iPhone a
 This is a port of [UZDoom](https://github.com/UZDoom/UZDoom), a modern Doom engine, to tvOS. It comes with a simple launcher: pick a game, press play, and you're in.
 
 > [!NOTE]
-> **Engine update:** the `main` branch now builds UZDoom 5.0.3 (the v0.5.0 release uses 4.14.3). It runs Freedoom on an Apple TV 4K (2nd generation); other models and the rest of the controller features still need testing.
->
-> **Version 0.5: a testing release.** The game runs at 60 fps on an Apple TV 4K (2nd generation), with working graphics, sound, saves and controls. Some rough edges remain; see [Known issues](#known-issues). It isn't on the App Store or TestFlight: you install it yourself from a Mac, signed with your own Apple ID ([how](#installing-sideloading)). Testing on other Apple TV models is very welcome; see [Testing wanted](#testing-wanted).
+> **Version 0.6: a testing release, now on UZDoom 5.0.3.** The game runs at 60 fps on an Apple TV 4K (2nd generation), with working graphics, sound, saves and controls. The 0.5.0 release used UZDoom 4.14.3; see the [changelog](CHANGELOG.md) for what changed. Some rough edges remain; see [Known issues](#known-issues). It isn't on the App Store or TestFlight: you install it yourself from a Mac, signed with your own Apple ID ([how](#installing-sideloading)). Testing on other Apple TV models is very welcome; see [Testing wanted](#testing-wanted).
 
 ---
 
@@ -256,7 +254,8 @@ For more build options (rebuilding single parts, custom settings), see [`tvos/RE
 - **Keep vsync off.** Turning it on makes the frame rate drop sharply. The new-install defaults leave it off.
 - **The hardware renderer breaks textures.** With the hardware (GPU) renderer, distant walls smear into stripes and floors turn flat grey. Please stay on the software renderer (the default), which holds 60 fps on an Apple TV 4K. Fixing the hardware renderer is a [milestone for a future release](#roadmap).
 - **Striped status-bar border with "classic" border scaling.** The pattern beside the status bar breaks up into stripes. New installs use the non-classic scaling, which draws correctly.
-- The pink title screen (a UZDoom bug on Apple GPUs, [UZDoom#1116](https://github.com/UZDoom/UZDoom/issues/1116)) is fixed by a workaround in this build.
+- The pink or green title screen (a UZDoom bug on Apple GPUs, [UZDoom#1116](https://github.com/UZDoom/UZDoom/issues/1116)) is fixed by a workaround in this build.
+- **Not re-tested on 5.0.3:** music, gyro and touchpad aim, the iPhone controller, and the hardware renderer's texture problems. The sticks also feel slightly different from 0.5.0 (new response curve). Please [report](#testing-wanted) anything odd.
 - **Above 1080p the frame rate drops.** The software renderer draws on the CPU, and the Apple TV 4K (2nd gen, A12) holds 60 fps at 1080p but not at 1440p or 4K. A 4K TV still looks fine, because the Apple TV scales the picture up.
 - **The iPhone controller has a little lag** compared with a real controller, because it goes over Wi-Fi.
 - **Install needs a Mac.** There are no ready-made downloads yet; see [Installing](#installing-sideloading).
@@ -265,7 +264,8 @@ For more build options (rebuilding single parts, custom settings), see [`tvos/RE
 
 ## Roadmap
 
-- **0.5 (this release):** software renderer at 60 fps, controllers with gyro and touchpad aim, iPhone controller, save backups, optional iCloud, one-command install.
+- **0.6 (this release):** UZDoom 5.0.3 engine, with the black-screen fix for Apple GPUs and ported controller support.
+- **0.5:** software renderer at 60 fps, controllers with gyro and touchpad aim, iPhone controller, save backups, optional iCloud, one-command install.
 - **Next milestones:**
   - **Hardware renderer:** fix its broken textures, so it can be used for mods and higher resolutions.
   - **Wider device support:** results from older Apple TV models (see below), and performance above 1080p.

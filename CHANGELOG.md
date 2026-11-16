@@ -1,11 +1,21 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 (testing release)
 
-- Engine updated from UZDoom 4.14.3 to 5.0.3. The tvOS patch was re-ported by hand (Discord rich presence and the Mach-O autosegment lookup no longer exist upstream). Runs on an Apple TV 4K (2nd generation) with Freedoom.
+Moves the engine from UZDoom 4.14.3 to **UZDoom 5.0.3**.
+
+### Engine
+- UZDoom 5.0.3 running on tvOS 17+. The tvOS patch was ported by hand: Discord rich presence and the Mach-O autosegment lookup no longer exist upstream, and ZMusic now comes bundled with the engine.
+- Controller support was ported to UZDoom 5.0's new joystick layer. Sticks use its response curve and a radial dead zone, so the feel is a little different from 0.5.0.
 - Fixed a black screen on 5.0.3: the Apple TV's GPU faulted on Metal argument buffers, so the app now turns them off for MoltenVK.
-- Developer overrides: `Caches/engine.env` (environment variables) and `Caches/engine.args` (engine arguments).
-- `UZ_EXTERNAL_ZMUSIC=1 ./tvos/install.sh` builds ZMusic standalone as a fallback if music doesn't load.
+- Includes the upstream fix for uninitialized Vulkan pipeline images ([UZDoom#1116](https://github.com/UZDoom/UZDoom/issues/1116)).
+
+### Build and tools
+- `UZ_EXTERNAL_ZMUSIC=1 ./tvos/install.sh` builds ZMusic on its own as a fallback if music doesn't load.
+- Developer overrides: `Caches/engine.env` (environment variables) and `Caches/engine.args` (engine arguments) are read at launch.
+
+### Testing status
+- Checked on an Apple TV 4K (2nd generation) with Freedoom. Music, gyro and touchpad aim, the iPhone controller and the new stick feel have not been re-tested on 5.0.3.
 
 ## 0.5.0 (testing release)
 

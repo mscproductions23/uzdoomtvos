@@ -1,5 +1,7 @@
 # macOS / Xcode
 .DS_Store
+# Xcode's compiler cache; it contains local user paths
+-Xcc/
 app/build/
 xcuserdata/
 *.xcuserstate
