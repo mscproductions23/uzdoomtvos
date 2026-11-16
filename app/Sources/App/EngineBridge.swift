@@ -26,11 +26,11 @@ final class EngineBridge {
         }
     }
 
-    /// Written as uzdoom.ini when none exists. Version=228 matches UZDoom 4.14.3's config
+    /// Written as uzdoom.ini when none exists. Version=234 matches UZDoom 5.0.3's engine config
     /// version, so the engine doesn't run its old-config upgrade steps on this file.
     private static let starterConfig = """
         [LastRun]
-        Version=228
+        Version=234
 
         [GlobalSettings]
         use_joystick=true

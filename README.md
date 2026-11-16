@@ -5,7 +5,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/tvOS-17%2B-000000?logo=apple&logoColor=white" alt="tvOS 17+">
   <img src="https://img.shields.io/badge/Apple%20TV-4K-22e2f8" alt="Apple TV 4K">
-  <img src="https://img.shields.io/badge/UZDoom-4.14.3-1f7784" alt="UZDoom 4.14.3">
+  <img src="https://img.shields.io/badge/UZDoom-5.0.3-1f7784" alt="UZDoom 5.0.3">
   <img src="https://img.shields.io/badge/60%20fps-1080p-2ea44f" alt="60 fps at 1080p">
   <img src="https://img.shields.io/badge/version-0.5.0-orange" alt="Version 0.5.0">
   <img src="https://img.shields.io/badge/install-sideload-8a2be2" alt="Install: sideload">
@@ -25,6 +25,8 @@ Play classic Doom on your Apple TV with a game controller, or with your iPhone a
 This is a port of [UZDoom](https://github.com/UZDoom/UZDoom), a modern Doom engine, to tvOS. It comes with a simple launcher: pick a game, press play, and you're in.
 
 > [!NOTE]
+> **Engine update in progress:** the `main` branch now targets UZDoom 5.0.3 (released builds, v0.5.0, use 4.14.3). The 5.0.3 port is still being tested on a device.
+>
 > **Version 0.5: a testing release.** The game runs at 60 fps on an Apple TV 4K (2nd generation), with working graphics, sound, saves and controls. Some rough edges remain; see [Known issues](#known-issues). It isn't on the App Store or TestFlight: you install it yourself from a Mac, signed with your own Apple ID ([how](#installing-sideloading)). Testing on other Apple TV models is very welcome; see [Testing wanted](#testing-wanted).
 
 ---
@@ -282,7 +284,7 @@ Only the Apple TV 4K (2nd generation) has been tested so far. Reports from any o
 ## How it works (for the curious)
 
 - `app/`: the Apple TV launcher, written in SwiftUI. It finds your games, runs the small web server for the iPhone (files, save backups and the touch controller), syncs with iCloud, and starts the engine.
-- `tvos/build-tvos.sh`: one script that downloads UZDoom 4.14.3 and its libraries (SDL2, ZMusic, OpenAL, libvpx, MoltenVK), applies the patches and builds `UZDoomEngine.framework`.
+- `tvos/build-tvos.sh`: one script that downloads UZDoom 5.0.3 and its libraries (SDL2, ZMusic, OpenAL, libvpx, MoltenVK), applies the patches and builds `UZDoomEngine.framework`.
 - `tvos/patches/`: the small changes needed to make each library work on Apple TV.
 - Graphics go through **Vulkan → MoltenVK → Metal**, Apple's graphics system.
 

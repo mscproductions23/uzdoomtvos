@@ -37,7 +37,7 @@ APP_DIR="$REPO_ROOT/app"
 OUT_FW="$APP_DIR/Frameworks"
 
 # Versions
-UZDOOM_TAG="4.14.3"
+UZDOOM_TAG="5.0.3"
 SDL_TAG="release-2.32.10"
 ZMUSIC_TAG="1.1.14"
 VPX_TAG="v1.15.2"

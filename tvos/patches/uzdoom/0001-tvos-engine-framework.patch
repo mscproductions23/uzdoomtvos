@@ -1,9 +1,9 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 2bb65f3..1c46c12 100644
+index 1ba030a..e92c0da 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -49,6 +49,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
- 
+@@ -55,6 +55,11 @@ find_package(Threads REQUIRED)
+ find_package(Python3 3.6 REQUIRED)
  
  list( APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake )
 +if( CMAKE_SYSTEM_NAME STREQUAL "tvOS" )
@@ -14,93 +14,97 @@ index 2bb65f3..1c46c12 100644
  include( FindPackageHandleStandardArgs )
  
  # Support cross compiling
-@@ -90,7 +95,7 @@ function( add_pk3 PK3_NAME PK3_DIR )
- 	# Generate target name. Just use "pk3" for main pk3 target.
- 	string( REPLACE "." "_" PK3_TARGET ${PK3_NAME} )
- 
--	if( NOT ZDOOM_OUTPUT_OLDSTYLE )
-+	if( NOT ZDOOM_OUTPUT_OLDSTYLE AND NOT UZ_TOOLS_ONLY )
- 		add_custom_command( OUTPUT ${ZDOOM_OUTPUT_DIR}/${PK3_NAME}
- 			COMMAND zipdir -udf ${PK3_ZIPDIR_OPTIONS} ${ZDOOM_OUTPUT_DIR}/${PK3_NAME} ${PK3_DIR}
- 			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ZDOOM_OUTPUT_DIR}/${PK3_NAME} $<TARGET_FILE_DIR:zdoom>/${PK3_NAME}
-@@ -227,6 +232,10 @@ endif()
- option (HAVE_VULKAN "Enable Vulkan support" ON)
- option (HAVE_GLES2 "Enable GLES2 support" ON)
+@@ -290,6 +295,10 @@ else()
+ 	option (HAVE_GLES2 "Enable GLES2 support" ON)
+ endif()
  
 +if( UZ_TVOS )
 +	set( HAVE_GLES2 OFF )
 +endif()
 +
- # no, we're not using external asmjit for now, we made too many modifications to our's.
- # if the asmjit author uses our changes then we'll update this.
- 
-@@ -304,7 +313,9 @@ else()
- 
- 
+ if( MSVC )
+ 	# Eliminate unreferenced functions and data
+ 	# Perform identical COMDAT folding
+@@ -366,10 +375,12 @@ else()
  	if( APPLE )
--		set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13")
+ 		list(PREPEND CMAKE_PREFIX_PATH "/opt/local")    # port
+ 		list(PREPEND CMAKE_PREFIX_PATH "/opt/homebrew") # brew
+-		if(DEFINED XCODE_VERSION AND XCODE_VERSION VERSION_LESS 27.0)
+-			set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13") # This is the actual minimum...
+-		else()
+-			set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0") # ...but XCode 27 has this as the minimum
 +		if( NOT UZ_TVOS )
-+			set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13")
-+		endif()
++			if(DEFINED XCODE_VERSION AND XCODE_VERSION VERSION_LESS 27.0)
++				set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13") # This is the actual minimum...
++			else()
++				set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0") # ...but XCode 27 has this as the minimum
++			endif()
+ 		endif()
  		if( CMAKE_CXX_COMPILER_ID STREQUAL "GNU" )
  			# If we're compiling with a custom GCC on the Mac (which we know since g++-4.2 doesn't support C++11) statically link libgcc.
- 			set( ALL_C_FLAGS "-static-libgcc" )
-@@ -336,14 +347,16 @@ option(FORCE_INTERNAL_BZIP2 "Use internal bzip2")
- option(FORCE_INTERNAL_ASMJIT "Use internal asmjit" ON)
- mark_as_advanced( FORCE_INTERNAL_ASMJIT )
+@@ -402,8 +413,10 @@ option(FORCE_INTERNAL_BZIP2 "Use internal bzip2")
+ option(FORCE_INTERNAL_CPPDAP "Use internal cppdap" ON)
+ option(FORCE_INTERNAL_WEBP "Use internal webp" ON)
  
 -if (HAVE_VULKAN)
 -	add_subdirectory( libraries/ZVulkan )
--endif()
 +if( NOT UZ_TOOLS_ONLY )
 +	if (HAVE_VULKAN)
 +		add_subdirectory( libraries/ZVulkan )
 +	endif()
- 
--add_subdirectory( libraries/ZWidget )
--add_subdirectory( libraries/webp )
-+	add_subdirectory( libraries/ZWidget )
-+	add_subdirectory( libraries/webp )
- 
--add_subdirectory( libraries/discordrpc EXCLUDE_FROM_ALL )
-+	add_subdirectory( libraries/discordrpc EXCLUDE_FROM_ALL )
-+endif()
- set( DRPC_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libraries/discordrpc/include" )
- set( DRPC_LIBRARIES discord-rpc )
- set( DRPC_LIBRARY discord-rpc )
-@@ -366,12 +379,14 @@ if( ${HAVE_VM_JIT} )
- 	if( ASMJIT_FOUND AND NOT FORCE_INTERNAL_ASMJIT )
- 		message( STATUS "Using system asmjit, includes found at ${ASMJIT_INCLUDE_DIR}" )
- 	else()
--		message( STATUS "Using internal asmjit" )
--		set( SKIP_INSTALL_ALL TRUE ) # Avoid installing asmjit alongside zdoom
--		add_subdirectory( libraries/asmjit )
--		set( ASMJIT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libraries/asmjit )
--		set( ASMJIT_LIBRARIES asmjit )
--		set( ASMJIT_LIBRARY asmjit )
-+		if( NOT UZ_TOOLS_ONLY )
-+			message( STATUS "Using internal asmjit" )
-+			set( SKIP_INSTALL_ALL TRUE ) # Avoid installing asmjit alongside zdoom
-+			add_subdirectory( libraries/asmjit )
-+			set( ASMJIT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libraries/asmjit )
-+			set( ASMJIT_LIBRARIES asmjit )
-+			set( ASMJIT_LIBRARY asmjit )
-+		endif()
- 	endif()
  endif()
  
-@@ -413,7 +428,10 @@ add_subdirectory( wadsrc_bm )
- add_subdirectory( wadsrc_lights )
- add_subdirectory( wadsrc_extra )
- add_subdirectory( wadsrc_widepix )
+ if( MSVC )
+@@ -412,7 +425,9 @@ endif()
+ add_subdirectory( libraries/abseil )
+ 
+ set(ZWIDGET_BUILD_EXAMPLE OFF CACHE INTERNAL "" FORCE)
+-add_subdirectory( libraries/ZWidget )
++if( NOT UZ_TOOLS_ONLY )
++	add_subdirectory( libraries/ZWidget )
++endif()
+ 
+ if( HAVE_VM_JIT AND UNIX )
+ 	check_symbol_exists( "backtrace" "execinfo.h" HAVE_BACKTRACE )
+@@ -429,10 +444,12 @@ if( HAVE_VM_JIT AND UNIX )
+ endif( HAVE_VM_JIT AND UNIX )
+ 
+ if( ${HAVE_VM_JIT} )
+-	set( SKIP_INSTALL_ALL TRUE ) # Avoid installing asmjit alongside zdoom
+-	add_subdirectory( libraries/asmjit )
+-	set( ASMJIT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libraries/asmjit )
+-	set( ASMJIT_LIBRARIES asmjit )
++	if( NOT UZ_TOOLS_ONLY )
++		set( SKIP_INSTALL_ALL TRUE ) # Avoid installing asmjit alongside zdoom
++		add_subdirectory( libraries/asmjit )
++		set( ASMJIT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libraries/asmjit )
++		set( ASMJIT_LIBRARIES asmjit )
++	endif()
+ endif()
+ 
+ if( BZIP2_FOUND AND NOT FORCE_INTERNAL_BZIP2 )
+@@ -461,7 +478,9 @@ if ( WEBP_FOUND AND NOT FORCE_INTERNAL_WEBP )
+ 	set( WEBP_TARGET PkgConfig::WEBP )
+ else()
+ 	message( STATUS "Using internal webp library" )
+-	add_subdirectory( libraries/webp )
++	if( NOT UZ_TOOLS_ONLY )
++		add_subdirectory( libraries/webp )
++	endif()
+ 	set( WEBP_TARGET webp )
+ endif()
+ 
+@@ -492,7 +511,9 @@ install(DIRECTORY docs/
+ option( DYN_OPENAL "Dynamically load OpenAL" ON )
+ option( BUILD_NONFREE "Build non-free assets used by commercial games" ON )
+ 
 -add_subdirectory( src )
-+
 +if( NOT UZ_TOOLS_ONLY )
 +	add_subdirectory( src )
 +endif()
- 
- if( NOT CMAKE_CROSSCOMPILING )
- 	export(TARGETS ${CROSS_EXPORTS} FILE "${CMAKE_BINARY_DIR}/ImportExecutables.cmake" )
+ add_subdirectory( libraries/lzma )
+ add_subdirectory( tools )
+ add_subdirectory( wadsrc )
 diff --git a/libraries/ZVulkan/src/volk/volk.c b/libraries/ZVulkan/src/volk/volk.c
 index 67f85c7..91e8f8b 100644
 --- a/libraries/ZVulkan/src/volk/volk.c
@@ -184,20 +188,20 @@ index be18a86..986f177 100644
  		return nullptr;
  
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index d5e8955..d84dacd 100644
+index 53beadc..1cd09cb 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -25,6 +25,9 @@ endif()
+@@ -24,6 +24,9 @@ endif()
  
  if( APPLE )
-     option( OSX_COCOA_BACKEND "Use native Cocoa backend instead of SDL" ON )
+ 		option( OSX_COCOA_BACKEND "Use native Cocoa backend instead of SDL" ON )
 +	if( UZ_TVOS )
 +		set( OSX_COCOA_BACKEND OFF )
 +	endif()
  endif()
  
  option( ZDOOM_ENABLE_SWR "Enable software renderer" ON )
-@@ -151,8 +154,10 @@ if( NOT NO_OPENAL )
+@@ -122,8 +125,10 @@ if( NOT NO_OPENAL )
  			mark_as_advanced(CLEAR OPENAL_LIBRARY)
  			if( OPENAL_LIBRARY )
  				set( PROJECT_LIBRARIES ${OPENAL_LIBRARY} ${PROJECT_LIBRARIES} )
@@ -209,21 +213,7 @@ index d5e8955..d84dacd 100644
  				endif()
  			else()
  				set( NO_OPENAL ON )
-@@ -321,7 +326,12 @@ add_custom_target( revision_check ALL
- 
- # required libraries
- 
--set( PROJECT_LIBRARIES ${PROJECT_LIBRARIES} miniz "${BZIP2_LIBRARIES}" "${CMAKE_DL_LIBS}" "${DRPC_LIBRARIES}")
-+if( UZ_TVOS )
-+	# discord-rpc needs AppKit; richpresence.cpp is a no-op on tvOS.
-+	set( PROJECT_LIBRARIES ${PROJECT_LIBRARIES} miniz "${BZIP2_LIBRARIES}" "${CMAKE_DL_LIBS}")
-+else()
-+	set( PROJECT_LIBRARIES ${PROJECT_LIBRARIES} miniz "${BZIP2_LIBRARIES}" "${CMAKE_DL_LIBS}" "${DRPC_LIBRARIES}")
-+endif()
- if (HAVE_VULKAN)
- 	list( APPEND PROJECT_LIBRARIES "zvulkan" )
- endif()
-@@ -464,7 +474,17 @@ if( WIN32 )
+@@ -431,7 +436,17 @@ if( WIN32 )
  
  	set( SYSTEM_SOURCES ${SYSTEM_SOURCES} win32/zdoom.rc )
  elseif( APPLE )
@@ -242,11 +232,11 @@ index d5e8955..d84dacd 100644
  		set( SYSTEM_SOURCES_DIR common/platform/posix common/platform/posix/cocoa )
  		set( SYSTEM_SOURCES ${PLAT_COCOA_SOURCES} )
  		set( OTHER_SYSTEM_SOURCES ${PLAT_WIN32_SOURCES} ${PLAT_SDL_SOURCES} ${PLAT_UNIX_SOURCES} )
-@@ -1247,7 +1267,22 @@ set( GAME_SOURCES
+@@ -1275,7 +1290,22 @@ set( GAME_SOURCES
  set( GAME_NONPCH_SOURCES ${GAME_SOURCES} )
  list( REMOVE_ITEM GAME_NONPCH_SOURCES ${PCH_SOURCES} )
  
--add_executable( zdoom WIN32 MACOSX_BUNDLE ${GAME_SOURCES} )
+-add_executable( zdoom MACOSX_BUNDLE ${GAME_SOURCES} )
 +if( UZ_TVOS )
 +	# On tvOS the engine is a framework that the Swift app links and embeds.
 +	add_library( zdoom SHARED ${GAME_SOURCES} common/platform/posix/sdl/uzdoom_entry.cpp )
@@ -254,30 +244,30 @@ index d5e8955..d84dacd 100644
 +		FRAMEWORK TRUE
 +		OUTPUT_NAME UZDoomEngine
 +		MACOSX_FRAMEWORK_IDENTIFIER com.mscproductions.uzdoomengine
-+		MACOSX_FRAMEWORK_SHORT_VERSION_STRING "4.14.3"
++		MACOSX_FRAMEWORK_SHORT_VERSION_STRING "5.0.3"
 +		MACOSX_FRAMEWORK_BUNDLE_VERSION "1"
 +		INSTALL_NAME_DIR "@rpath"
 +		BUILD_WITH_INSTALL_NAME_DIR ON
 +		INSTALL_RPATH "@executable_path/Frameworks;@loader_path/.."
 +		BUILD_WITH_INSTALL_RPATH ON )
 +else()
-+	add_executable( zdoom WIN32 MACOSX_BUNDLE ${GAME_SOURCES} )
++	add_executable( zdoom MACOSX_BUNDLE ${GAME_SOURCES} )
 +endif()
  
  target_include_directories( zdoom PRIVATE ${CMAKE_BINARY_DIR} )
  
-@@ -1348,7 +1383,9 @@ if( NOT ZDOOM_OUTPUT_OLDSTYLE )
- 	# RUNTIME_OUTPUT_DIRECTORY does not exist in CMake 2.4.
- 	# Linux distributions are slow to adopt 2.6. :(
- 	set_target_properties( zdoom PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ZDOOM_OUTPUT_DIR} )
--	set_target_properties( zdoom PROPERTIES OUTPUT_NAME ${ZDOOM_EXE_NAME} )
-+	if( NOT UZ_TVOS )
-+		set_target_properties( zdoom PROPERTIES OUTPUT_NAME ${ZDOOM_EXE_NAME} )
-+	endif()
- else()
- 	set_target_properties( zdoom PROPERTIES
- 		RUNTIME_OUTPUT_NAME ${ZDOOM_EXE_NAME}
-@@ -1450,7 +1487,7 @@ if( DEM_CMAKE_COMPILER_IS_GNUCXX_COMPATIBLE )
+@@ -1392,7 +1422,9 @@ include_directories(
+ )
+ 
+ set_target_properties( zdoom PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ZDOOM_OUTPUT_DIR} )
+-set_target_properties( zdoom PROPERTIES OUTPUT_NAME ${ZDOOM_EXE_NAME} )
++if( NOT UZ_TVOS )
++	set_target_properties( zdoom PROPERTIES OUTPUT_NAME ${ZDOOM_EXE_NAME} )
++endif()
+ 
+ if(NOT MINGW AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+ 	set_target_properties(zdoom PROPERTIES LINK_FLAGS "-z nostart-stop-gc")
+@@ -1503,7 +1535,7 @@ if( DEM_CMAKE_COMPILER_IS_GNUCXX_COMPATIBLE )
  		APPEND_STRING PROPERTY COMPILE_FLAGS " ${SSE2_ENABLE}" )
  endif()
  
@@ -286,10 +276,10 @@ index d5e8955..d84dacd 100644
  	set( LINK_FRAMEWORKS "-framework Cocoa -framework IOKit -framework OpenGL")
  
  	if( HAVE_VULKAN )
-@@ -1466,6 +1503,12 @@ if( APPLE )
- 	# Dymanic libraries like libvulkan.dylib or libMoltenVK.dylib will be loaded by dlopen()
- 	# if placed in the directory with the main executable
- 	set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rpath @executable_path" )
+@@ -1532,6 +1564,12 @@ if( APPLE )
+ 	# this is enabled with xcode, but not when using ninja. Explicitly enabling it here to make builds unified
+ 	target_compile_definitions( zdoom PRIVATE
+ 		_LIBCPP_HARDENING_MODE=$<IF:$<CONFIG:Debug>,_LIBCPP_HARDENING_MODE_DEBUG,_LIBCPP_HARDENING_MODE_FAST> )
 +elseif( UZ_TVOS )
 +	target_link_libraries( zdoom
 +		"-framework Foundation" "-framework UIKit" "-framework Metal" "-framework QuartzCore"
@@ -298,69 +288,12 @@ index d5e8955..d84dacd 100644
 +		"-framework IOSurface" "-weak_framework CoreHaptics" iconv c++ )
  endif()
  
- if( WIN32 )
-diff --git a/src/common/engine/m_joy.cpp b/src/common/engine/m_joy.cpp
-index 1e4b2f3..1eb9195 100644
---- a/src/common/engine/m_joy.cpp
-+++ b/src/common/engine/m_joy.cpp
-@@ -59,7 +59,12 @@ EXTERN_CVAR(Bool, joy_xinput)
- 
- // PUBLIC DATA DEFINITIONS -------------------------------------------------
- 
--CUSTOM_CVARD(Bool, use_joystick, false, CVAR_ARCHIVE|CVAR_GLOBALCONFIG|CVAR_NOINITCALL, "enables input from the joystick if it is present") 
-+#ifdef UZ_TVOS
-+#define UZ_JOY_DEFAULT true // the Apple TV build requires a controller
-+#else
-+#define UZ_JOY_DEFAULT false
-+#endif
-+CUSTOM_CVARD(Bool, use_joystick, UZ_JOY_DEFAULT, CVAR_ARCHIVE|CVAR_GLOBALCONFIG|CVAR_NOINITCALL, "enables input from the joystick if it is present") 
- {
- #ifdef _WIN32
- 	joy_ps2raw->Callback();
-diff --git a/src/common/objects/autosegs.cpp b/src/common/objects/autosegs.cpp
-index e9b3f93..49eb554 100644
---- a/src/common/objects/autosegs.cpp
-+++ b/src/common/objects/autosegs.cpp
-@@ -51,6 +51,7 @@
- #elif defined __MACH__
- #include <mach-o/getsect.h>
- #include <mach-o/ldsyms.h>
-+#include <dlfcn.h>
- #endif
- 
- 
-@@ -104,12 +105,23 @@ void FAutoSeg::Initialize()
- 
- #elif defined __MACH__
- 
-+	// Look up the sections in the image that contains this code, which is
-+	// the engine framework on tvOS rather than the main executable.
-+	static const char imageAnchor = 0;
-+	Dl_info info;
-+	const mach_header_64* header = nullptr;
-+	if (dladdr(&imageAnchor, &info) != 0)
-+		header = static_cast<const mach_header_64*>(info.dli_fbase);
-+
- 	unsigned long size;
- 
--	if (uint8_t *const section = getsectiondata(&_mh_execute_header, AUTOSEG_MACH_SEGMENT, name, &size))
-+	if (header != nullptr)
- 	{
--		begin = reinterpret_cast<void **>(section);
--		end = reinterpret_cast<void **>(section + size);
-+		if (uint8_t *const section = getsectiondata(header, AUTOSEG_MACH_SEGMENT, name, &size))
-+		{
-+			begin = reinterpret_cast<void **>(section);
-+			end = reinterpret_cast<void **>(section + size);
-+		}
- 	}
- 
- #else // Linux and others with ELF executables
+ target_compile_options(zdoom PRIVATE
 diff --git a/src/common/platform/posix/osx/i_specialpaths.mm b/src/common/platform/posix/osx/i_specialpaths.mm
-index 7d55157..5dc7681 100644
+index 898b091..ec415b2 100644
 --- a/src/common/platform/posix/osx/i_specialpaths.mm
 +++ b/src/common/platform/posix/osx/i_specialpaths.mm
-@@ -43,8 +43,17 @@ FString M_GetMacAppSupportPath(const bool create);
+@@ -32,8 +32,17 @@ FString M_GetMacAppSupportPath(const bool create);
  
  static FString GetSpecialPath(const NSSearchPathDirectory kind, const BOOL create = YES, const NSSearchPathDomainMask domain = NSUserDomainMask)
  {
@@ -1251,23 +1184,23 @@ index 0000000..8cba827
 +	return NULL;
 +}
 diff --git a/src/common/platform/posix/sdl/i_input.cpp b/src/common/platform/posix/sdl/i_input.cpp
-index 37807d5..9c57cf8 100644
+index 9bd6eb2..92ab8a9 100644
 --- a/src/common/platform/posix/sdl/i_input.cpp
 +++ b/src/common/platform/posix/sdl/i_input.cpp
-@@ -46,6 +46,10 @@
- #include "keydef.h"
- #include "i_interface.h"
- #include "engineerrors.h"
+@@ -43,6 +43,10 @@
+ #include "utf8.h"
+ #include "v_video.h"
+ #include "version.h"
 +#ifdef UZ_TVOS
 +void S_SetSoundPaused(int state);
 +bool M_SaveDefaults(const char *filename);
 +#endif
- #include "i_interface.h"
  
- 
-@@ -224,6 +228,33 @@ static void I_CheckNativeMouse ()
- 	}
+ bool GUICapture;
+ static bool NativeMouse = true;
+@@ -294,6 +298,33 @@ static void I_CheckNativeMouse ()
  }
+ 
  
 +#ifdef UZ_TVOS
 +// tvOS kills an app that submits GPU work while in the background, so when
@@ -1299,7 +1232,7 @@ index 37807d5..9c57cf8 100644
  void MessagePump (const SDL_Event &sev)
  {
  	static int lastx = 0, lasty = 0;
-@@ -240,6 +271,12 @@ void MessagePump (const SDL_Event &sev)
+@@ -373,6 +404,12 @@ void MessagePump (const SDL_Event &sev)
  		ProcessSDLWindowEvent(sev.window);
  		break;
  
@@ -1311,12 +1244,12 @@ index 37807d5..9c57cf8 100644
 +
  	case SDL_MOUSEBUTTONDOWN:
  	case SDL_MOUSEBUTTONUP:
- 		if (!GUICapture)
+ 		if (joykey_stop_conflict > 0 && sev.type == SDL_MOUSEBUTTONDOWN) break;
 diff --git a/src/common/platform/posix/sdl/i_main.cpp b/src/common/platform/posix/sdl/i_main.cpp
-index fd80a26..46080e1 100644
+index 08f8a66..0545331 100644
 --- a/src/common/platform/posix/sdl/i_main.cpp
 +++ b/src/common/platform/posix/sdl/i_main.cpp
-@@ -99,6 +99,7 @@ void I_DetectOS()
+@@ -122,6 +122,7 @@ FString I_DetectOS()
  {
  	FString operatingSystem;
  
@@ -1324,19 +1257,19 @@ index fd80a26..46080e1 100644
  	const char *paths[] = {"/etc/os-release", "/usr/lib/os-release"};
  
  	for (const char *path : paths)
-@@ -130,6 +131,7 @@ void I_DetectOS()
+@@ -153,6 +154,7 @@ FString I_DetectOS()
  		pclose(proc);
  		break;
  	}
 +#endif
  
- 	utsname unameInfo;
+ 	struct utsname unameInfo;
  
 diff --git a/src/common/platform/posix/sdl/i_system.cpp b/src/common/platform/posix/sdl/i_system.cpp
-index 1236a19..f24d499 100644
+index 6921eed..884c24e 100644
 --- a/src/common/platform/posix/sdl/i_system.cpp
 +++ b/src/common/platform/posix/sdl/i_system.cpp
-@@ -92,6 +92,9 @@ void I_SetIWADInfo()
+@@ -76,6 +76,9 @@ void I_SetIWADInfo()
  
  extern "C" int I_FileAvailable(const char* filename)
  {
@@ -1346,7 +1279,7 @@ index 1236a19..f24d499 100644
  	FString cmd = "which {0} >/dev/null 2>&1";
  	cmd.Substitute("{0}", filename);
  
-@@ -102,6 +105,7 @@ extern "C" int I_FileAvailable(const char* filename)
+@@ -86,6 +89,7 @@ extern "C" int I_FileAvailable(const char* filename)
  	}
  
  	return 0;
@@ -1354,18 +1287,19 @@ index 1236a19..f24d499 100644
  }
  
  //
-@@ -310,7 +314,9 @@ int I_PickIWad (WadStuff *wads, int numwads, bool showwin, int defaultiwad, int&
- 		return defaultiwad;
+@@ -341,7 +345,10 @@ bool I_PickIWad (bool showwin, FStartupSelectionInfo& info)
+ 		return true;
  	}
  
 -#ifdef __APPLE__
 +#if defined(UZ_TVOS)
-+	return defaultiwad;
++	// tvOS has no IWAD picker: keep the default selection.
++	return true;
 +#elif defined(__APPLE__)
- 	return I_PickIWad_Cocoa (wads, numwads, showwin, defaultiwad);
- #else
- 	return LauncherWindow::ExecModal(wads, numwads, defaultiwad, &autoloadflags, &extraArgs);
-@@ -374,6 +380,7 @@ unsigned int I_MakeRNGSeed()
+ 	const int ret = I_PickIWad_Cocoa(&(*info.Wads)[0], (int)info.Wads->Size(), showwin, info.DefaultIWAD);
+ 	if (ret >= 0)
+ 	{
+@@ -411,6 +418,7 @@ unsigned int I_MakeRNGSeed()
  
  void I_OpenShellFolder(const char* infolder)
  {
@@ -1373,18 +1307,17 @@ index 1236a19..f24d499 100644
  	char* curdir = getcwd(NULL,0);
  
  	if (!chdir(infolder))
-@@ -395,5 +402,6 @@ void I_OpenShellFolder(const char* infolder)
+@@ -434,4 +442,5 @@ void I_OpenShellFolder(const char* infolder)
  			Printf("Unable to open requested directory\n");
  	}
  	free(curdir);
 +#endif
  }
- 
 diff --git a/src/common/platform/posix/sdl/i_system.mm b/src/common/platform/posix/sdl/i_system.mm
-index f9212f0..7652f78 100644
+index 1178679..ef4b1e2 100644
 --- a/src/common/platform/posix/sdl/i_system.mm
 +++ b/src/common/platform/posix/sdl/i_system.mm
-@@ -3,6 +3,11 @@
+@@ -26,6 +26,11 @@
  
  void Mac_I_FatalError(const char* errortext)
  {
@@ -1396,17 +1329,17 @@ index f9212f0..7652f78 100644
  	// Close window or exit fullscreen and release mouse capture
  	SDL_Quit();
  
-@@ -16,4 +21,5 @@ void Mac_I_FatalError(const char* errortext)
+@@ -39,4 +44,5 @@ void Mac_I_FatalError(const char* errortext)
  			CFSTR( "Fatal Error" ), errorString, CFSTR( "Exit" ), NULL, NULL, &dummy );
  		CFRelease( errorString );
  	}
 +#endif
  }
 diff --git a/src/common/platform/posix/sdl/sdlglvideo.cpp b/src/common/platform/posix/sdl/sdlglvideo.cpp
-index 5907585..e4a2a89 100644
+index 27e39a5..5768cc5 100644
 --- a/src/common/platform/posix/sdl/sdlglvideo.cpp
 +++ b/src/common/platform/posix/sdl/sdlglvideo.cpp
-@@ -621,7 +621,7 @@ int SystemGLFrameBuffer::GetClientHeight()
+@@ -605,7 +605,7 @@ int SystemGLFrameBuffer::GetClientHeight()
  
  void SystemGLFrameBuffer::SetVSync( bool vsync )
  {
@@ -1439,10 +1372,10 @@ index 0000000..e390182
 +	return SDL_main(argc, argv);
 +}
 diff --git a/src/common/rendering/gl_load/gl_system.h b/src/common/rendering/gl_load/gl_system.h
-index 6b40d73..6036f7d 100644
+index 3ae454f..2561ae9 100644
 --- a/src/common/rendering/gl_load/gl_system.h
 +++ b/src/common/rendering/gl_load/gl_system.h
-@@ -26,7 +26,7 @@
+@@ -43,7 +43,7 @@
  //GL headers
  #include "gl_load/gl_load.h"
  
@@ -1452,10 +1385,10 @@ index 6b40d73..6036f7d 100644
  #endif
  
 diff --git a/src/common/rendering/gles/gles_system.h b/src/common/rendering/gles/gles_system.h
-index 0edec62..e61d633 100644
+index cb7e281..5331846 100644
 --- a/src/common/rendering/gles/gles_system.h
 +++ b/src/common/rendering/gles/gles_system.h
-@@ -68,7 +68,7 @@
+@@ -85,7 +85,7 @@
  	#include "gl_load/gl_load.h"
  #endif
  
@@ -1465,10 +1398,10 @@ index 0edec62..e61d633 100644
  #endif
  
 diff --git a/src/common/rendering/v_video.h b/src/common/rendering/v_video.h
-index ed428ee..4341035 100644
+index 8c17cf9..a183463 100644
 --- a/src/common/rendering/v_video.h
 +++ b/src/common/rendering/v_video.h
-@@ -258,6 +258,9 @@ public:
+@@ -265,6 +265,9 @@ public:
  	virtual void SetSceneRenderTarget(bool useSSAO) {}
  	virtual void UpdateShadowMap() {}
  	virtual void WaitForCommands(bool finish) {}
@@ -1479,7 +1412,7 @@ index ed428ee..4341035 100644
  	virtual void ImageTransitionScene(bool unknown) {}
  	virtual void CopyScreenToBuffer(int width, int height, uint8_t* buffer)	{ memset(buffer, 0, width* height); }
 diff --git a/src/common/rendering/vulkan/renderer/vk_renderpass.cpp b/src/common/rendering/vulkan/renderer/vk_renderpass.cpp
-index 5229335..432e703 100644
+index 84a4893..8b9c577 100644
 --- a/src/common/rendering/vulkan/renderer/vk_renderpass.cpp
 +++ b/src/common/rendering/vulkan/renderer/vk_renderpass.cpp
 @@ -67,6 +67,11 @@ VkRenderPassManager::VkRenderPassManager(VulkanRenderDevice* fb) : fb(fb)
@@ -1495,10 +1428,10 @@ index 5229335..432e703 100644
  	try
  	{
 diff --git a/src/common/rendering/vulkan/renderer/vk_renderpass.h b/src/common/rendering/vulkan/renderer/vk_renderpass.h
-index a1f8ca3..c2f81b0 100644
+index be0fad7..9add62f 100644
 --- a/src/common/rendering/vulkan/renderer/vk_renderpass.h
 +++ b/src/common/rendering/vulkan/renderer/vk_renderpass.h
-@@ -126,6 +126,7 @@ class VkRenderPassManager
+@@ -147,6 +147,7 @@ class VkRenderPassManager
  public:
  	VkRenderPassManager(VulkanRenderDevice* fb);
  	~VkRenderPassManager();
@@ -1507,10 +1440,10 @@ index a1f8ca3..c2f81b0 100644
  	void RenderBuffersReset();
  
 diff --git a/src/common/rendering/vulkan/system/vk_renderdevice.cpp b/src/common/rendering/vulkan/system/vk_renderdevice.cpp
-index 91686de..e59851d 100644
+index 1557d81..77e8fdd 100644
 --- a/src/common/rendering/vulkan/system/vk_renderdevice.cpp
 +++ b/src/common/rendering/vulkan/system/vk_renderdevice.cpp
-@@ -491,6 +491,14 @@ void VulkanRenderDevice::WaitForCommands(bool finish)
+@@ -479,6 +479,14 @@ void VulkanRenderDevice::WaitForCommands(bool finish)
  	mCommands->WaitForCommands(finish);
  }
  
@@ -1526,10 +1459,10 @@ index 91686de..e59851d 100644
  {
  	return mLights->GetBlockSize();
 diff --git a/src/common/rendering/vulkan/system/vk_renderdevice.h b/src/common/rendering/vulkan/system/vk_renderdevice.h
-index 6b11536..9b340e6 100644
+index 0052f18..82d98ae 100644
 --- a/src/common/rendering/vulkan/system/vk_renderdevice.h
 +++ b/src/common/rendering/vulkan/system/vk_renderdevice.h
-@@ -90,6 +90,9 @@ public:
+@@ -112,6 +112,9 @@ public:
  	void Draw2D() override;
  
  	void WaitForCommands(bool finish) override;
@@ -1540,7 +1473,7 @@ index 6b11536..9b340e6 100644
  	bool RaytracingEnabled();
  
 diff --git a/src/common/rendering/vulkan/textures/vk_hwtexture.cpp b/src/common/rendering/vulkan/textures/vk_hwtexture.cpp
-index a4975b7..45d48a3 100644
+index 47d1e49..bd3103f 100644
 --- a/src/common/rendering/vulkan/textures/vk_hwtexture.cpp
 +++ b/src/common/rendering/vulkan/textures/vk_hwtexture.cpp
 @@ -27,6 +27,7 @@
@@ -1669,10 +1602,10 @@ index a4975b7..45d48a3 100644
  {
  	if (mImage.Image && (mImage.Image->width != w || mImage.Image->height != h || mTexelsize != texelsize))
 diff --git a/src/common/rendering/vulkan/textures/vk_hwtexture.h b/src/common/rendering/vulkan/textures/vk_hwtexture.h
-index 2711bdb..40a4065 100644
+index 0a24cec..9fc4801 100644
 --- a/src/common/rendering/vulkan/textures/vk_hwtexture.h
 +++ b/src/common/rendering/vulkan/textures/vk_hwtexture.h
-@@ -49,6 +49,9 @@ private:
+@@ -71,6 +71,9 @@ private:
  	void CreateImage(FTexture *tex, int translation, int flags);
  
  	void CreateTexture(int w, int h, int pixelsize, VkFormat format, const void *pixels, bool mipmap);
@@ -1682,28 +1615,3 @@ index 2711bdb..40a4065 100644
  	static int GetMipLevels(int w, int h);
  
  	VkTextureImage mImage;
-diff --git a/src/common/thirdparty/richpresence.cpp b/src/common/thirdparty/richpresence.cpp
-index a8d8e81..c4bc7a6 100644
---- a/src/common/thirdparty/richpresence.cpp
-+++ b/src/common/thirdparty/richpresence.cpp
-@@ -35,6 +35,15 @@
- **
- */
- 
-+#ifdef UZ_TVOS
-+
-+// No Discord client on tvOS, and discord-rpc needs AppKit.
-+void I_UpdateDiscordPresence(bool SendPresence, const char* curstatus, const char* appid, const char* steamappid)
-+{
-+}
-+
-+#else
-+
- #include <time.h>
- #include <string.h>
- 
-@@ -127,3 +136,4 @@ void I_UpdateDiscordPresence(bool SendPresence, const char* curstatus, const cha
- 	}
- }
- 
-+#endif // UZ_TVOS

@@ -6,7 +6,7 @@ this repository. `tvos/build-tvos.sh` downloads the rest from the upstream proje
 
 | Component | Used for | License |
 |---|---|---|
-| [UZDoom](https://github.com/UZDoom/UZDoom) 4.14.3 | The game engine (patched by `tvos/patches/uzdoom`) | GPL v3 or later |
+| [UZDoom](https://github.com/UZDoom/UZDoom) 5.0.3 | The game engine (patched by `tvos/patches/uzdoom`) | GPL v3 or later |
 | UZDoom asset packages (`uzdoom.pk3`, `game_support.pk3`, `game_widescreen_gfx.pk3`, `brightmaps.pk3`, `lights.pk3`) | Built from UZDoom's `wadsrc*` folders and bundled into the app | See UZDoom's `LICENSE` and the `license.md` files in `wadsrc_bm`, `wadsrc_extra` and `wadsrc_widepix` |
 | UZDoom logo | App icon, Top Shelf images, launcher logo and README banner (`app/Sources/App/Assets.xcassets`, `docs/images/banner.png`), adapted by recolouring, resizing and adding text | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), © 2025 The UZDoom Team. The adapted images are shared under the same license |
 | [SDL](https://github.com/libsdl-org/SDL) 2.32.10 | Window, input and events (patched by `tvos/patches/sdl2`) | zlib |

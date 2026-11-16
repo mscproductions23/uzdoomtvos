@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Engine updated from UZDoom 4.14.3 to 5.0.3. The tvOS patch was re-ported by hand (Discord rich presence and the Mach-O autosegment lookup no longer exist upstream). **Not yet compiled or run on a device.**
+
 ## 0.5.0 (testing release)
 
 First public testing release of UZDoom 4.14.3 for Apple TV.
