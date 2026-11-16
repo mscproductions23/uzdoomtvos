@@ -212,7 +212,7 @@ index be18a86..986f177 100644
  		return nullptr;
  
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 53beadc..1cd09cb 100644
+index 53beadc..931955a 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
 @@ -24,6 +24,9 @@ endif()
@@ -280,7 +280,7 @@ index 53beadc..1cd09cb 100644
  
  target_include_directories( zdoom PRIVATE ${CMAKE_BINARY_DIR} )
  
-@@ -1392,7 +1422,9 @@ include_directories(
+@@ -1392,9 +1422,11 @@ include_directories(
  )
  
  set_target_properties( zdoom PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ZDOOM_OUTPUT_DIR} )
@@ -289,8 +289,11 @@ index 53beadc..1cd09cb 100644
 +	set_target_properties( zdoom PROPERTIES OUTPUT_NAME ${ZDOOM_EXE_NAME} )
 +endif()
  
- if(NOT MINGW AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+-if(NOT MINGW AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
++if(NOT MINGW AND NOT APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
  	set_target_properties(zdoom PROPERTIES LINK_FLAGS "-z nostart-stop-gc")
+ endif()
+ 
 @@ -1503,7 +1535,7 @@ if( DEM_CMAKE_COMPILER_IS_GNUCXX_COMPATIBLE )
  		APPEND_STRING PROPERTY COMPILE_FLAGS " ${SSE2_ENABLE}" )
  endif()
