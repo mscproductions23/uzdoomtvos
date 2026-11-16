@@ -339,10 +339,10 @@ index 898b091..ec415b2 100644
  														   error:nil];
 diff --git a/src/common/platform/posix/sdl/i_gcjoystick.mm b/src/common/platform/posix/sdl/i_gcjoystick.mm
 new file mode 100644
-index 0000000..8cba827
+index 0000000..cdb29da
 --- /dev/null
 +++ b/src/common/platform/posix/sdl/i_gcjoystick.mm
-@@ -0,0 +1,864 @@
+@@ -0,0 +1,901 @@
 +// i_gcjoystick.mm: game controller input for tvOS via Apple's GameController framework. Part of UZDoom; see LICENSE for terms.
 +
 +#import <GameController/GameController.h>
@@ -427,28 +427,31 @@ index 0000000..8cba827
 +	~FGCController();
 +
 +	void ProcessInput();
-+	void AddAxes(float axes[NUM_JOYAXIS]);
-+	bool IsConnected() { return Connected; }
++	void AddAxes(float axes[NUM_AXIS_CODES]);
 +
-+	// IJoystickConfig interface
++	bool IsConnected() { return Connected; }
 +	FString GetName();
 +	float GetSensitivity();
-+	virtual void SetSensitivity(float scale);
++	void SetSensitivity(float scale);
++
++	bool HasHaptics() { return false; }
++	float GetHapticsStrength() { return 0; }
++	void SetHapticsStrength(float strength) {}
 +
 +	int GetNumAxes();
 +	float GetAxisDeadZone(int axis);
-+	EJoyAxis GetAxisMap(int axis);
 +	const char *GetAxisName(int axis);
 +	float GetAxisScale(int axis);
 +
-+	void SetAxisDeadZone(int axis, float deadzone);
-+	void SetAxisMap(int axis, EJoyAxis gameaxis);
-+	void SetAxisScale(int axis, float scale);
++	float GetAxisDigitalThreshold(int axis);
++	EJoyCurve GetAxisResponseCurve(int axis);
++	float GetAxisResponseCurvePoint(int axis, int point);
 +
-+	bool IsSensitivityDefault();
-+	bool IsAxisDeadZoneDefault(int axis);
-+	bool IsAxisMapDefault(int axis);
-+	bool IsAxisScaleDefault(int axis);
++	void SetAxisDeadZone(int axis, float deadzone);
++	void SetAxisScale(int axis, float scale);
++	void SetAxisDigitalThreshold(int axis, float threshold);
++	void SetAxisResponseCurve(int axis, EJoyCurve preset);
++	void SetAxisResponseCurvePoint(int axis, int point, float value);
 +
 +	bool GetEnabled();
 +	void SetEnabled(bool enabled);
@@ -457,33 +460,37 @@ index 0000000..8cba827
 +	bool GetEnabledInBackground() { return false; }
 +	void SetEnabledInBackground(bool enabled) {}
 +
++	bool IsSensitivityDefault();
++	bool IsHapticsStrengthDefault() { return true; }
++
++	bool IsAxisDeadZoneDefault(int axis);
++	bool IsAxisScaleDefault(int axis);
++	bool IsAxisDigitalThresholdDefault(int axis);
++	bool IsAxisResponseCurveDefault(int axis);
++
 +	void SetDefaultConfig();
 +	FString GetIdentifier();
 +
 +protected:
++	enum { AXIS_ThumbLX, AXIS_ThumbLY, AXIS_ThumbRX, AXIS_ThumbRY, AXIS_LeftTrigger, AXIS_RightTrigger, NUM_AXES };
++
 +	struct AxisInfo
 +	{
-+		float Value;
 +		float DeadZone;
 +		float Multiplier;
-+		EJoyAxis GameAxis;
++		float DigitalThreshold;
++		EJoyCurve ResponseCurvePreset;
++		CubicBezier ResponseCurve;
++		double Value;
 +		uint8_t ButtonValue;
 +	};
++
 +	struct DefaultAxisConfig
 +	{
 +		float DeadZone;
-+		EJoyAxis GameAxis;
 +		float Multiplier;
-+	};
-+	enum
-+	{
-+		AXIS_ThumbLX,
-+		AXIS_ThumbLY,
-+		AXIS_ThumbRX,
-+		AXIS_ThumbRY,
-+		AXIS_LeftTrigger,
-+		AXIS_RightTrigger,
-+		NUM_AXES
++		float DigitalThreshold;
++		EJoyCurve ResponseCurvePreset;
 +	};
 +
 +	float Multiplier;
@@ -501,8 +508,8 @@ index 0000000..8cba827
 +	void Detached();
 +	void ProcessAim(GCExtendedGamepad *pad);
 +
-+	static void ProcessThumbstick(float value1, AxisInfo *axis1, float value2, AxisInfo *axis2, int base);
-+	static void ProcessTrigger(float value, AxisInfo *axis, int base);
++	void ProcessThumbstick(float value1, AxisInfo *axis1, float value2, AxisInfo *axis2, int base);
++	void ProcessTrigger(float value, AxisInfo *axis, int base);
 +};
 +
 +// EXTERNAL FUNCTION PROTOTYPES --------------------------------------------
@@ -527,15 +534,13 @@ index 0000000..8cba827
 +	"Right Trigger"
 +};
 +
-+FGCController::DefaultAxisConfig FGCController::DefaultAxes[NUM_AXES] =
-+{
-+	// Dead zone, game axis, multiplier
-+	{ 0.24f, JOYAXIS_Side, 1 },			// ThumbLX
-+	{ 0.24f, JOYAXIS_Forward, 1 },		// ThumbLY
-+	{ 0.265f, JOYAXIS_Yaw, 1 },			// ThumbRX
-+	{ 0.265f, JOYAXIS_Pitch, 0.75f },	// ThumbRY
-+	{ 0.117f, JOYAXIS_None, 0 },		// LeftTrigger
-+	{ 0.117f, JOYAXIS_None, 0 }			// RightTrigger
++FGCController::DefaultAxisConfig FGCController::DefaultAxes[NUM_AXES] = {
++	{ 0.24f, 1, JOYTHRESH_STICK_X, JOYCURVE_DEFAULT },
++	{ 0.24f, 1, JOYTHRESH_STICK_Y, JOYCURVE_DEFAULT },
++	{ 0.265f, 1, JOYTHRESH_STICK_X, JOYCURVE_DEFAULT },
++	{ 0.265f, 0.75f, JOYTHRESH_STICK_Y, JOYCURVE_DEFAULT },
++	{ 0.117f, 1, JOYTHRESH_TRIGGER, JOYCURVE_DEFAULT },
++	{ 0.117f, 1, JOYTHRESH_TRIGGER, JOYCURVE_DEFAULT }
 +};
 +
 +// CODE --------------------------------------------------------------------
@@ -674,44 +679,139 @@ index 0000000..8cba827
 +//
 +//==========================================================================
 +
-+void FGCController::ProcessThumbstick(float value1, AxisInfo *axis1,
-+	float value2, AxisInfo *axis2, int base)
++void FGCController::ProcessThumbstick(float value1, AxisInfo *axis1, float value2, AxisInfo *axis2, int base)
 +{
-+	uint8_t buttonstate;
-+	double axisval1, axisval2;
++	double axisval1 = value1, axisval2 = value2;
++	uint8_t buttonstate = 0;
 +
-+	// Input values are already -1..1 from GameController
-+	axisval1 = Joy_RemoveDeadZone(value1, axis1->DeadZone, NULL);
-+	axisval2 = Joy_RemoveDeadZone(value2, axis2->DeadZone, NULL);
-+	axis1->Value = float(axisval1);
-+	axis2->Value = float(axisval2);
++	Joy_ManageThumbstick(&axisval1, &axisval2, axis1->DeadZone, axis2->DeadZone, axis1->DigitalThreshold, axis2->DigitalThreshold, axis1->ResponseCurve, axis2->ResponseCurve, &buttonstate);
 +
-+	// We store all four buttons in the first axis and ignore the second.
-+	buttonstate = Joy_XYAxesToButtons(axisval1, axisval2);
++	axis1->Value = axisval1;
++	axis2->Value = axisval2;
++
 +	Joy_GenerateButtonEvents(axis1->ButtonValue, buttonstate, 4, base);
 +	axis1->ButtonValue = buttonstate;
 +}
 +
-+//==========================================================================
-+//
-+// FGCController :: ProcessTrigger							STATIC
-+//
-+// Much like ProcessThumbstick, except triggers only go in the positive
-+// direction and have less precision.
-+//
-+//==========================================================================
-+
 +void FGCController::ProcessTrigger(float value, AxisInfo *axis, int base)
 +{
-+	uint8_t buttonstate;
-+	double axisval;
++	uint8_t buttonstate = 0;
++	double axisval = Joy_ManageSingleAxis(value, axis->DeadZone, axis->DigitalThreshold, axis->ResponseCurve, &buttonstate);
 +
-+	// Input value is 0..1 from GameController
-+	axisval = Joy_RemoveDeadZone(value, axis->DeadZone, &buttonstate);
 +	Joy_GenerateButtonEvents(axis->ButtonValue, buttonstate, 1, base);
 +	axis->ButtonValue = buttonstate;
-+	axis->Value = float(axisval);
++	axis->Value = axisval;
 +}
++
++void FGCController::AddAxes(float axes[NUM_AXIS_CODES])
++{
++	if (!Connected || !Enabled)
++		return;
++
++	static const EAxisCodes codes[NUM_AXES][2] = {
++		{ AXIS_CODE_PAD_LTHUMB_RIGHT, AXIS_CODE_PAD_LTHUMB_LEFT },
++		{ AXIS_CODE_PAD_LTHUMB_DOWN, AXIS_CODE_PAD_LTHUMB_UP },
++		{ AXIS_CODE_PAD_RTHUMB_RIGHT, AXIS_CODE_PAD_RTHUMB_LEFT },
++		{ AXIS_CODE_PAD_RTHUMB_DOWN, AXIS_CODE_PAD_RTHUMB_UP },
++		{ AXIS_CODE_PAD_LTRIGGER, AXIS_CODE_NULL },
++		{ AXIS_CODE_PAD_RTRIGGER, AXIS_CODE_NULL }
++	};
++
++	for (int i = 0; i < NUM_AXES; ++i)
++	{
++		float v = float(Axes[i].Value * Multiplier * Axes[i].Multiplier);
++		EAxisCodes code;
++		if (v > 0.0f)
++			code = codes[i][0];
++		else if (v < 0.0f)
++			code = codes[i][1];
++		else
++			continue;
++
++		if (code != AXIS_CODE_NULL)
++			axes[code] += fabsf(v);
++	}
++}
++
++void FGCController::SetDefaultConfig()
++{
++	Multiplier = JOYSENSITIVITY_DEFAULT;
++
++	for (int i = 0; i < NUM_AXES; ++i)
++	{
++		Axes[i].Value = 0;
++		Axes[i].ButtonValue = 0;
++		Axes[i].DeadZone = DefaultAxes[i].DeadZone;
++		Axes[i].Multiplier = DefaultAxes[i].Multiplier;
++		Axes[i].DigitalThreshold = DefaultAxes[i].DigitalThreshold;
++		Axes[i].ResponseCurvePreset = DefaultAxes[i].ResponseCurvePreset;
++		Axes[i].ResponseCurve = JOYCURVE[DefaultAxes[i].ResponseCurvePreset];
++	}
++}
++
++float FGCController::GetAxisDigitalThreshold(int axis)
++{
++	if (unsigned(axis) < NUM_AXES)
++		return Axes[axis].DigitalThreshold;
++	return 0;
++}
++
++EJoyCurve FGCController::GetAxisResponseCurve(int axis)
++{
++	if (unsigned(axis) < NUM_AXES)
++		return Axes[axis].ResponseCurvePreset;
++	return JOYCURVE_DEFAULT;
++}
++
++float FGCController::GetAxisResponseCurvePoint(int axis, int point)
++{
++	if (unsigned(axis) < NUM_AXES && unsigned(point) < 4)
++		return Axes[axis].ResponseCurve.pts[point];
++	return 0;
++}
++
++void FGCController::SetAxisDigitalThreshold(int axis, float threshold)
++{
++	if (unsigned(axis) < NUM_AXES)
++		Axes[axis].DigitalThreshold = threshold;
++}
++
++void FGCController::SetAxisResponseCurve(int axis, EJoyCurve preset)
++{
++	if (preset >= NUM_JOYCURVE || preset < JOYCURVE_CUSTOM)
++		return;
++	if (unsigned(axis) >= NUM_AXES)
++		return;
++
++	Axes[axis].ResponseCurvePreset = preset;
++	if (preset == JOYCURVE_CUSTOM)
++		return;
++	Axes[axis].ResponseCurve = JOYCURVE[preset];
++}
++
++void FGCController::SetAxisResponseCurvePoint(int axis, int point, float value)
++{
++	if (unsigned(axis) < NUM_AXES && unsigned(point) < 4)
++	{
++		Axes[axis].ResponseCurvePreset = JOYCURVE_CUSTOM;
++		Axes[axis].ResponseCurve.pts[point] = value;
++	}
++}
++
++bool FGCController::IsAxisDigitalThresholdDefault(int axis)
++{
++	if (unsigned(axis) < NUM_AXES)
++		return Axes[axis].DigitalThreshold == DefaultAxes[axis].DigitalThreshold;
++	return true;
++}
++
++bool FGCController::IsAxisResponseCurveDefault(int axis)
++{
++	if (unsigned(axis) < NUM_AXES)
++		return Axes[axis].ResponseCurvePreset == DefaultAxes[axis].ResponseCurvePreset;
++	return true;
++}
++
 +
 +//==========================================================================
 +//
@@ -846,43 +946,6 @@ index 0000000..8cba827
 +	}
 +}
 +
-+//==========================================================================
-+//
-+// FGCController :: AddAxes
-+//
-+// Add the values of each axis to the game axes.
-+//
-+//==========================================================================
-+
-+void FGCController::AddAxes(float axes[NUM_JOYAXIS])
-+{
-+	// Add to game axes.
-+	if (Connected)
-+	{
-+		for (int i = 0; i < NUM_AXES; ++i)
-+		{
-+			if (Axes[i].GameAxis != JOYAXIS_None)
-+				axes[Axes[i].GameAxis] -= float(Axes[i].Value * Multiplier * Axes[i].Multiplier);
-+		}
-+	}
-+}
-+
-+//==========================================================================
-+//
-+// FGCController :: SetDefaultConfig
-+//
-+//==========================================================================
-+
-+void FGCController::SetDefaultConfig()
-+{
-+	Multiplier = 1;
-+	for (int i = 0; i < NUM_AXES; ++i)
-+	{
-+		Axes[i].DeadZone = DefaultAxes[i].DeadZone;
-+		Axes[i].GameAxis = DefaultAxes[i].GameAxis;
-+		Axes[i].Multiplier = DefaultAxes[i].Multiplier;
-+	}
-+}
 +
 +//==========================================================================
 +//
@@ -967,21 +1030,6 @@ index 0000000..8cba827
 +
 +//==========================================================================
 +//
-+// FGCController :: GetAxisMap
-+//
-+//==========================================================================
-+
-+EJoyAxis FGCController::GetAxisMap(int axis)
-+{
-+	if (unsigned(axis) < NUM_AXES)
-+	{
-+		return Axes[axis].GameAxis;
-+	}
-+	return JOYAXIS_None;
-+}
-+
-+//==========================================================================
-+//
 +// FGCController :: GetAxisName
 +//
 +//==========================================================================
@@ -1021,20 +1069,6 @@ index 0000000..8cba827
 +	if (unsigned(axis) < NUM_AXES)
 +	{
 +		Axes[axis].DeadZone = clamp(deadzone, 0.f, 1.f);
-+	}
-+}
-+
-+//==========================================================================
-+//
-+// FGCController :: SetAxisMap
-+//
-+//==========================================================================
-+
-+void FGCController::SetAxisMap(int axis, EJoyAxis gameaxis)
-+{
-+	if (unsigned(axis) < NUM_AXES)
-+	{
-+		Axes[axis].GameAxis = (unsigned(gameaxis) < NUM_JOYAXIS) ? gameaxis : JOYAXIS_None;
 +	}
 +}
 +
@@ -1104,21 +1138,6 @@ index 0000000..8cba827
 +	Enabled = enabled;
 +}
 +
-+//===========================================================================
-+//
-+// FGCController :: IsAxisMapDefault
-+//
-+//===========================================================================
-+
-+bool FGCController::IsAxisMapDefault(int axis)
-+{
-+	if (unsigned(axis) < NUM_AXES)
-+	{
-+		return Axes[axis].GameAxis == DefaultAxes[axis].GameAxis;
-+	}
-+	return true;
-+}
-+
 +//==========================================================================
 +//
 +// Global Controller Instance
@@ -1171,16 +1190,34 @@ index 0000000..8cba827
 +//
 +//==========================================================================
 +
-+void I_GetAxes(float axes[NUM_JOYAXIS])
++void I_GetAxes(float axes[NUM_AXIS_CODES])
 +{
-+	for (int i = 0; i < NUM_JOYAXIS; ++i)
-+	{
-+		axes[i] = 0;
-+	}
++	for (int i = 0; i < NUM_AXIS_CODES; ++i)
++		axes[i] = 0.0f;
++
 +	if (use_joystick && Controller)
-+	{
 +		Controller->AddAxes(axes);
++}
++
++void I_JoyConsumeEvent(int instanceID, event_t *event)
++{
++	(void)instanceID; // one controller on tvOS; instance IDs are not used
++
++	if (event->type == EV_KeyDown) {
++		bool okay = use_joystick && Controller && Controller->GetEnabled();
++		if (!okay) return;
 +	}
++
++	D_PostEvent(event);
++}
++
++// Rumble is not implemented on the Apple GameController backend yet; HasHaptics() reports false, so the engine will not expect feedback.
++void I_Rumble(double high_freq, double low_freq, double left_trig, double right_trig)
++{
++	(void)high_freq;
++	(void)low_freq;
++	(void)left_trig;
++	(void)right_trig;
 +}
 +
 +//==========================================================================
