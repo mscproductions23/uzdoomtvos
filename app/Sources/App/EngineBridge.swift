@@ -158,6 +158,10 @@ final class EngineBridge {
             print("[EngineBridge] Warning: MoltenVK not found at \(moltenVKPath)")
         }
         setenv("SDL_VULKAN_LIBRARY", moltenVKPath, 1)
+        // UZDoom 5.0.3 triggers a GPU page fault (black screen) on the Apple TV A12 when MoltenVK
+        // binds descriptors through Metal argument buffers, so use plain bindings. engine.env can
+        // override this (MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS=1).
+        setenv("MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS", "0", 1)
         Self.applyEnvOverrides(from: cachesDirURL)
 
         print("[EngineBridge] Launching UZDoom")

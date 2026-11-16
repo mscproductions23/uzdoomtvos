@@ -25,7 +25,7 @@ Play classic Doom on your Apple TV with a game controller, or with your iPhone a
 This is a port of [UZDoom](https://github.com/UZDoom/UZDoom), a modern Doom engine, to tvOS. It comes with a simple launcher: pick a game, press play, and you're in.
 
 > [!NOTE]
-> **Engine update in progress:** the `main` branch now targets UZDoom 5.0.3 (released builds, v0.5.0, use 4.14.3). The 5.0.3 port is still being tested on a device.
+> **Engine update:** the `main` branch now builds UZDoom 5.0.3 (the v0.5.0 release uses 4.14.3). It runs Freedoom on an Apple TV 4K (2nd generation); other models and the rest of the controller features still need testing.
 >
 > **Version 0.5: a testing release.** The game runs at 60 fps on an Apple TV 4K (2nd generation), with working graphics, sound, saves and controls. Some rough edges remain; see [Known issues](#known-issues). It isn't on the App Store or TestFlight: you install it yourself from a Mac, signed with your own Apple ID ([how](#installing-sideloading)). Testing on other Apple TV models is very welcome; see [Testing wanted](#testing-wanted).
 
