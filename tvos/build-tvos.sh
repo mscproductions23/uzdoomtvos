@@ -339,6 +339,8 @@ step_engine() {
     log_header "Step 9: engine"
 
     mkdir -p "$BUILD/uzdoom-tvos"
+    # A ZMusic from an older build (pre-5.0) would shadow the bundled headers via -I$PREFIX/include.
+    rm -f "$PREFIX/include/zmusic.h" "$PREFIX/lib/libzmusic.a"
 
     local openal_args=()
     if [[ "$NO_AUDIO" == "1" ]]; then
