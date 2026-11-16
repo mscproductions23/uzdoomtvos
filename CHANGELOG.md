@@ -4,7 +4,6 @@
 
 - Engine updated from UZDoom 4.14.3 to 5.0.3. The tvOS patch was re-ported by hand (Discord rich presence and the Mach-O autosegment lookup no longer exist upstream). Runs on an Apple TV 4K (2nd generation) with Freedoom.
 - Fixed a black screen on 5.0.3: the Apple TV's GPU faulted on Metal argument buffers, so the app now turns them off for MoltenVK.
-- The engine log is now written to `Caches/log-uzdoom.txt` (5.0.3 changed how `+logfile` works).
 - Developer overrides: `Caches/engine.env` (environment variables) and `Caches/engine.args` (engine arguments).
 - `UZ_EXTERNAL_ZMUSIC=1 ./tvos/install.sh` builds ZMusic standalone as a fallback if music doesn't load.
 

@@ -499,7 +499,7 @@ step_summary() {
     echo "2. Pick your Apple TV as the run destination"
     echo "3. Press Run (⌘R)"
     echo ""
-    echo "Engine output appears in Xcode's console; the app also writes Caches/log-uzdoom.txt on the device."
+    echo "Engine output appears in Xcode's console."
 }
 
 # === MAIN ===
