@@ -100,7 +100,7 @@ If a step fails, the script prints the last 40 lines of its log. Check the full 
 2. Select your Apple TV as the run destination
 3. Press Run (⌘R)
 
-Engine output appears in Xcode's console. The app also writes logs to `Caches/uzdoom.log` on the device.
+Engine output appears in Xcode's console. The app also writes logs to `Caches/log-uzdoom.txt` on the device.
 
 ## If It Fails
 

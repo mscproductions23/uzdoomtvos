@@ -59,7 +59,7 @@ Problems that were queued up behind it:
   (`-DZMUSIC_POSIX_GLIB_STUBS=ON`).
 - The app passes `argv[0] = <bundle>/uzdoom`, so the pk3s, `soundfonts/`
   and `fm_banks/` sit at the bundle root. Engine output also goes to
-  `Caches/uzdoom.log` on the device.
+  `Caches/log-uzdoom.txt` on the device.
 
 ## Apple TV rendering findings (September 25, 2026, Apple TV 4K 2nd gen, A12)
 

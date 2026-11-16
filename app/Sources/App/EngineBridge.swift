@@ -95,7 +95,10 @@ final class EngineBridge {
 
         // Get log file path in Caches directory.
         let cachesDirURL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-        let logFilePath = cachesDirURL.appendingPathComponent("uzdoom.log").path
+        // UZDoom 5.x writes "log-<name>.txt" into the current directory (it no longer takes a
+        // path), and the app bundle is read-only, so run from Caches: Caches/log-uzdoom.txt.
+        FileManager.default.changeCurrentDirectoryPath(cachesDirURL.path)
+        let logFilePath = cachesDirURL.appendingPathComponent("log-uzdoom.txt").path
 
         // Build the argument list exactly as you would on desktop.
         // argv[0] must point to bundle root so engine's program directory is correct.
@@ -108,7 +111,7 @@ final class EngineBridge {
             "+vid_preferbackend", "1",   // Vulkan → MoltenVK → Metal
             "+vid_fullscreen",    "1",
             "+use_joystick",      "1",   // a controller is required; older configs saved it off
-            "+logfile", logFilePath,
+            "+logfile", "uzdoom",
         ]
         args += ControllerPrefs.engineArgs()   // gyro / touchpad aim (Controller Settings)
         if UserDefaults.standard.bool(forKey: Self.showFrameRateKey) {
