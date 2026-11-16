@@ -39,7 +39,6 @@ OUT_FW="$APP_DIR/Frameworks"
 # Versions
 UZDOOM_TAG="5.0.3"
 SDL_TAG="release-2.32.10"
-ZMUSIC_TAG="1.1.14"
 VPX_TAG="v1.15.2"
 OPENAL_TAG="1.24.3"
 MOLTENVK_VERSION="v1.4.2"
@@ -86,13 +85,13 @@ plist_set() {
 }
 
 check_done() {
-    # Only used for dependency builds: sdl2, zmusic, libvpx, openal
+    # Only used for dependency builds: sdl2, libvpx, openal
     [[ ! -f "$BUILD/$1.done" || "$FORCE" == "1" ]] && return 1
     return 0
 }
 
 mark_done() {
-    # Only used for dependency builds: sdl2, zmusic, libvpx, openal
+    # Only used for dependency builds: sdl2, libvpx, openal
     mkdir -p "$BUILD"
     touch "$BUILD/$1.done"
 }
@@ -141,7 +140,6 @@ step_fetch() {
     local repos=(
         "uzdoom:$UZDOOM_TAG:https://github.com/UZDoom/UZDoom.git"
         "sdl2:$SDL_TAG:https://github.com/libsdl-org/SDL.git"
-        "zmusic:$ZMUSIC_TAG:https://github.com/UZDoom/ZMusic.git"
         "libvpx:$VPX_TAG:https://github.com/webmproject/libvpx.git"
         "openal:$OPENAL_TAG:https://github.com/kcat/openal-soft.git"
     )
@@ -157,7 +155,7 @@ step_fetch() {
     done
 
     # Apply patches
-    for name in uzdoom sdl2 zmusic libvpx openal; do
+    for name in uzdoom sdl2 libvpx openal; do
         local patch_dir="$REPO_ROOT/tvos/patches/$name"
         if [[ -d "$patch_dir" ]]; then
             while IFS= read -r -d '' pfile; do
@@ -176,6 +174,22 @@ step_fetch() {
             done < <(find "$patch_dir" -name "*.patch" -print0 | sort -z)
         fi
     done
+
+    # ZMusic is bundled in the UZDoom tree at libraries/ZMusic; apply our ZMusic patches there
+    local zm_patch_dir="$REPO_ROOT/tvos/patches/zmusic"
+    if [[ -d "$zm_patch_dir" ]]; then
+        while IFS= read -r -d '' pfile; do
+            echo "Checking patch: $(basename "$pfile") (libraries/ZMusic)"
+            if git -C "$SRC/uzdoom" apply --directory=libraries/ZMusic --reverse --check "$pfile" >/dev/null 2>&1; then
+                echo "  Already applied, skipping"
+            elif git -C "$SRC/uzdoom" apply --directory=libraries/ZMusic --check "$pfile" >/dev/null 2>&1; then
+                echo "  Applying..."
+                git -C "$SRC/uzdoom" apply --directory=libraries/ZMusic "$pfile"
+            else
+                die "Patch $(basename "$pfile") no longer matches $SRC/uzdoom/libraries/ZMusic. Delete that folder and re-run: rm -rf '$SRC/uzdoom'"
+            fi
+        done < <(find "$zm_patch_dir" -name "*.patch" -print0 | sort -z)
+    fi
 
     # Download and extract MoltenVK
     mkdir -p "$WORK/downloads"
@@ -213,29 +227,6 @@ step_sdl2() {
     [[ -f "$PREFIX/include/SDL2/SDL.h" ]] || die "SDL2 header not found"
 
     mark_done "sdl2"
-}
-
-step_zmusic() {
-    check_done "zmusic" && return
-    log_header "Step 4: zmusic"
-
-    mkdir -p "$BUILD/zmusic"
-    # ZMusic and the engine each compile their own copy of i_module.cpp
-    # (class FModule). Linked statically into one framework they collide,
-    # so give ZMusic's copy different names.
-    local zm_rename="-DFModule=ZMusicFModule -DFModule_SetProgDir=ZMusicFModule_SetProgDir -DFModule_GetProgDir=ZMusicFModule_GetProgDir"
-    run_step "zmusic_configure" cmake -S "$SRC/zmusic" -B "$BUILD/zmusic" \
-        "${GENERATOR[@]}" \
-        "${TVOS_CMAKE_ARGS[@]}" \
-        -DBUILD_SHARED_LIBS=OFF -DZMUSIC_POSIX_GLIB_STUBS=ON \
-        "-DCMAKE_CXX_FLAGS=$zm_rename"
-    run_step "zmusic_build" cmake --build "$BUILD/zmusic" --parallel "$JOBS"
-    run_step "zmusic_install" cmake --install "$BUILD/zmusic"
-
-    [[ -f "$PREFIX/lib/libzmusic.a" ]] || die "zmusic static library not found"
-    [[ -f "$PREFIX/include/zmusic.h" ]] || die "zmusic header not found"
-
-    mark_done "zmusic"
 }
 
 step_libvpx() {
@@ -361,7 +352,7 @@ step_engine() {
         "${TVOS_CMAKE_ARGS[@]}" \
         "-DIMPORT_EXECUTABLES=$BUILD/uzdoom-host/ImportExecutables.cmake" \
         "-DSDL2_INCLUDE_DIR=$PREFIX/include/SDL2" "-DSDL2_LIBRARY=$PREFIX/lib/libSDL2.a" \
-        "-DZMUSIC_INCLUDE_DIR=$PREFIX/include" "-DZMUSIC_LIBRARIES=$PREFIX/lib/libzmusic.a" \
+        "-DZMUSIC_POSIX_GLIB_STUBS=ON" \
         "-DVPX_INCLUDE_DIR=$PREFIX/include" "-DVPX_LIBRARIES=$PREFIX/lib/libvpx.a" \
         "-DCMAKE_C_FLAGS=-I$PREFIX/include" "-DCMAKE_CXX_FLAGS=-I$PREFIX/include" \
         "${openal_args[@]}"
@@ -466,7 +457,7 @@ START_TIME=$(date +%s)
 if [[ "$#" -gt 0 ]] && { [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; }; then
     echo "Usage: $0 [<step>...]"
     echo ""
-    echo "Steps: fetch sdl2 zmusic libvpx openal moltenvk host-tools engine package summary all"
+    echo "Steps: fetch sdl2 libvpx openal moltenvk host-tools engine package summary all"
     echo "Note: preflight always runs first to set up directories."
     echo ""
     echo "Environment variables:"
@@ -479,9 +470,9 @@ if [[ "$#" -gt 0 ]] && { [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; }; then
     echo "Examples:"
     echo "  $0                      # Build everything"
     echo "  $0 all                  # Build everything (same as no args)"
-    echo "  $0 sdl2 zmusic          # Build only SDL2 and zmusic (dependencies)"
+    echo "  $0 sdl2 libvpx          # Build only SDL2 and libvpx (dependencies)"
     echo "  $0 engine package       # Rebuild engine and package"
-    echo "  FORCE=1 $0              # Rebuild cached dependencies (sdl2, zmusic, libvpx, openal)"
+    echo "  FORCE=1 $0              # Rebuild cached dependencies (sdl2, libvpx, openal)"
     echo "  NO_AUDIO=1 $0           # Build without audio support"
     exit 0
 fi
@@ -493,7 +484,6 @@ if [[ "$#" -eq 0 ]]; then
     # Build all
     step_fetch
     step_sdl2
-    step_zmusic
     step_libvpx
     step_openal
     step_moltenvk
@@ -508,7 +498,6 @@ else
             all)
                 step_fetch
                 step_sdl2
-                step_zmusic
                 step_libvpx
                 step_openal
                 step_moltenvk
@@ -519,7 +508,6 @@ else
                 ;;
             fetch) step_fetch ;;
             sdl2) step_sdl2 ;;
-            zmusic) step_zmusic ;;
             libvpx) step_libvpx ;;
             openal) step_openal ;;
             moltenvk) step_moltenvk ;;
