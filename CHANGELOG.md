@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.6.1 (testing release)
+
+Security hardening, from a full audit of the repository. No gameplay changes.
+
+### iPhone connection (Connect iPhone…)
+- The access key is now checked before any upload data is accepted, so an unauthorized device can't make the Apple TV buffer a large file.
+- Limits: request headers up to 16 KB, files up to 256 MB, at most 8 connections at once, and idle connections close after 30 seconds. Phone-controller connections must authenticate within 10 seconds.
+- Restoring a `.zip` is checked first: at most 1000 files, 256 MB per file and 512 MB in total.
+- Download file names are cleaned before they go into a response header.
+
+### Build and downloads
+- The Freedoom download is checked against a pinned SHA-256 checksum before it is unpacked.
+- `build-tvos.sh` checks the MoltenVK download against a pinned SHA-256, and checks that UZDoom, SDL, libvpx and OpenAL are at the exact pinned commits, so a moved upstream tag stops the build.
+
+### Repository
+- Removed an Xcode compiler cache and generated game data from the whole git history (they contained local file paths). GitHub secret scanning and push protection are now on.
+
 ## 0.6.0 (testing release)
 
 Moves the engine from UZDoom 4.14.3 to **UZDoom 5.0.3**.

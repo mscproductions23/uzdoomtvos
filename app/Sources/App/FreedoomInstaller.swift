@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import ZIPFoundation
 
 /// Downloads the official Freedoom release and installs freedoom1.wad / freedoom2.wad
@@ -10,6 +11,10 @@ enum FreedoomInstaller {
     static let releaseURL = URL(string:
         "https://github.com/freedoom/freedoom/releases/download/v0.13.0/freedoom-0.13.0.zip")!
 
+    // releaseURL and releaseSHA256 must be bumped together. Any version change needs both updated.
+    // The SHA-256 was computed from the official GitHub release asset at releaseURL.
+    static let releaseSHA256 = "3f9b264f3e3ce503b4fb7f6bdcb1f419d93c7b546f4df3e874dd878db9688f59"
+
     static func install(into wadDirectory: URL,
                         status: @Sendable (String) -> Void) async throws {
         try FileManager.default.createDirectory(at: wadDirectory, withIntermediateDirectories: true)
@@ -18,6 +23,16 @@ enum FreedoomInstaller {
         let (tempFile, response) = try await URLSession.shared.download(from: releaseURL)
         guard (response as? HTTPURLResponse)?.statusCode == 200 else {
             throw URLError(.badServerResponse)
+        }
+
+        // Verify the downloaded file's integrity
+        let digest = try SHA256.hash(data: Data(contentsOf: tempFile, options: .mappedIfSafe))
+        let actualSHA256 = digest.map { String(format: "%02x", $0) }.joined()
+        guard actualSHA256 == releaseSHA256 else {
+            try? FileManager.default.removeItem(at: tempFile)
+            throw NSError(domain: "FreedoomInstaller", code: 2, userInfo: [
+                NSLocalizedDescriptionKey: "The Freedoom download didn't match its expected checksum, so it was not installed."
+            ])
         }
 
         status("Unpacking…")

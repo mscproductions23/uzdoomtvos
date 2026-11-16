@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/Apple%20TV-4K-22e2f8" alt="Apple TV 4K">
   <img src="https://img.shields.io/badge/UZDoom-5.0.3-1f7784" alt="UZDoom 5.0.3">
   <img src="https://img.shields.io/badge/60%20fps-1080p-2ea44f" alt="60 fps at 1080p">
-  <img src="https://img.shields.io/badge/version-0.6.0-orange" alt="Version 0.6.0">
+  <img src="https://img.shields.io/badge/version-0.6.1-orange" alt="Version 0.6.1">
   <img src="https://img.shields.io/badge/install-sideload-8a2be2" alt="Install: sideload">
   <img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License: GPL-3.0">
 </p>
@@ -25,7 +25,7 @@ Play classic Doom on your Apple TV with a game controller, or with your iPhone a
 This is a port of [UZDoom](https://github.com/UZDoom/UZDoom), a modern Doom engine, to tvOS. It comes with a simple launcher: pick a game, press play, and you're in.
 
 > [!NOTE]
-> **Version 0.6: a testing release, now on UZDoom 5.0.3.** The game runs at 60 fps on an Apple TV 4K (2nd generation), with working graphics, sound, saves and controls. The 0.5.0 release used UZDoom 4.14.3; see the [changelog](CHANGELOG.md) for what changed. Some rough edges remain; see [Known issues](#known-issues). It isn't on the App Store or TestFlight: you install it yourself from a Mac, signed with your own Apple ID ([how](#installing-sideloading)). Testing on other Apple TV models is very welcome; see [Testing wanted](#testing-wanted).
+> **Version 0.6.1: a testing release, now on UZDoom 5.0.3.** The game runs at 60 fps on an Apple TV 4K (2nd generation), with working graphics, sound, saves and controls. The 0.5.0 release used UZDoom 4.14.3; see the [changelog](CHANGELOG.md) for what changed. Some rough edges remain; see [Known issues](#known-issues). It isn't on the App Store or TestFlight: you install it yourself from a Mac, signed with your own Apple ID ([how](#installing-sideloading)). Testing on other Apple TV models is very welcome; see [Testing wanted](#testing-wanted).
 
 ---
 
@@ -113,7 +113,7 @@ The phone keeps its screen on while connected, reconnects by itself if the Wi-Fi
 2. The TV shows a QR code. On your iPhone, on the **same Wi-Fi**, scan it with the Camera app and open the link.
 3. The page opens in Safari. The link contains a one-time key, so someone on your Wi-Fi can't just open the page without scanning the code. The connection switches itself off after 15 minutes, unless the phone is being used as a controller.
 
-   > The connection is plain HTTP, so it isn't encrypted. Use it on your home Wi-Fi, not on public or shared networks.
+   > The connection is plain HTTP, so it isn't encrypted. Use it on your home Wi-Fi, not on public or shared networks. Files up to 256 MB are accepted, and a connection that goes quiet for 30 seconds is closed.
 4. Pick your files:
    - `.wad`, `.pk3`, `.ipk3` go into your game library.
    - `.zds` files go into your saves.
@@ -264,7 +264,8 @@ For more build options (rebuilding single parts, custom settings), see [`tvos/RE
 
 ## Roadmap
 
-- **0.6 (this release):** UZDoom 5.0.3 engine, with the black-screen fix for Apple GPUs and ported controller support.
+- **0.6.1 (this release):** security hardening of the iPhone connection and of the build downloads.
+- **0.6:** UZDoom 5.0.3 engine, with the black-screen fix for Apple GPUs and ported controller support.
 - **0.5:** software renderer at 60 fps, controllers with gyro and touchpad aim, iPhone controller, save backups, optional iCloud, one-command install.
 - **Next milestones:**
   - **Hardware renderer:** fix its broken textures, so it can be used for mods and higher resolutions.

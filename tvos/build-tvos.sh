@@ -38,10 +38,17 @@ OUT_FW="$APP_DIR/Frameworks"
 
 # Versions
 UZDOOM_TAG="5.0.3"
+# Pinned commits (verified after fetch). Update together with the matching *_TAG; they are the commit the tag points to.
+UZDOOM_COMMIT="7910df7102033fd7754a317f3254f24101135926"
 SDL_TAG="release-2.32.10"
+SDL_COMMIT="5d249570393f7a37e037abf22cd6012a4cc56a71"
 VPX_TAG="v1.15.2"
+VPX_COMMIT="d168454ecd099805c675d4a98c66f4891373302a"
 OPENAL_TAG="1.24.3"
+OPENAL_COMMIT="dc7d7054a5b4f3bec1dc23a42fd616a0847af948"
 MOLTENVK_VERSION="v1.4.2"
+# MoltenVK-all.tar SHA-256 for MOLTENVK_VERSION. Update this together with MOLTENVK_VERSION.
+MOLTENVK_SHA256="562a15a29bc358446a56a4091c5f7e08f604184187c1d34f712148b61ef17276"
 
 # Build settings
 TVOS_MIN="${TVOS_MIN:-17.0}"
@@ -97,6 +104,51 @@ mark_done() {
     # Only used for dependency builds: sdl2, libvpx, openal
     mkdir -p "$BUILD"
     touch "$BUILD/$1.done"
+}
+
+pinned_commit() {
+    local name="$1"
+    case "$name" in
+        uzdoom) echo "$UZDOOM_COMMIT" ;;
+        sdl2) echo "$SDL_COMMIT" ;;
+        libvpx) echo "$VPX_COMMIT" ;;
+        openal) echo "$OPENAL_COMMIT" ;;
+        *) die "no pinned commit for $name" ;;
+    esac
+}
+
+verify_commit() {
+    local name="$1"
+    local expected
+    expected=$(pinned_commit "$name")
+    local actual
+    actual=$(git -C "$SRC/$name" rev-parse HEAD) || die "cannot read HEAD of $SRC/$name"
+    if [[ "$actual" != "$expected" ]]; then
+        die "Repo $SRC/$name: expected commit $expected, got $actual. The tag may have been moved upstream; verify and update the *_COMMIT variable or delete $SRC/$name and re-run."
+    fi
+}
+
+sha256_of() {
+    local file="$1"
+    local hash
+    if command -v shasum >/dev/null 2>&1; then
+        hash=$(shasum -a 256 "$file") || die "cannot compute SHA-256 of $file"
+    elif command -v sha256sum >/dev/null 2>&1; then
+        hash=$(sha256sum "$file") || die "cannot compute SHA-256 of $file"
+    else
+        die "neither shasum nor sha256sum found"
+    fi
+    echo "$hash" | awk '{print $1}'
+}
+
+verify_moltenvk_tar() {
+    local file="$1"
+    local actual
+    actual=$(sha256_of "$file")
+    if [[ "$actual" != "$MOLTENVK_SHA256" ]]; then
+        rm -f "$file"
+        die "MoltenVK SHA-256 mismatch for $file: expected $MOLTENVK_SHA256, got $actual. The file was deleted; re-run to download it again."
+    fi
 }
 
 run_step() {
@@ -155,6 +207,7 @@ step_fetch() {
         else
             echo "Repo $name already cloned"
         fi
+        verify_commit "$name"
     done
 
     # Apply patches
@@ -203,6 +256,7 @@ step_fetch() {
     else
         echo "MoltenVK tar already downloaded"
     fi
+    verify_moltenvk_tar "$moltenvk_tar"
     # MoltenVK tar extracts to MoltenVK/ at the top level; extract into a subdir
     local moltenvk_xcfw="$SRC/moltenvk/MoltenVK/MoltenVK/dynamic/MoltenVK.xcframework"
     if [[ ! -d "$moltenvk_xcfw" ]]; then

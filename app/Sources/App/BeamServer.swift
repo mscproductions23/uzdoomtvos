@@ -19,7 +19,20 @@ final class BeamServer {
     private var accessKey = ""
     private var padListener: NWListener?
     private var padConnection: NWConnection?          // the one authenticated phone controller
+    private var pendingPadConnections: Set<ObjectIdentifier> = []   // unauthenticated pad connections; touched only on `queue`
+    private let padAuthTimeout: TimeInterval = 10                  // seconds to send the access key
+    private let maxPendingPadConnections = 4
     private var onPadChanged: ((Bool) -> Void)?
+    private let maxHeaderBytes = 16 * 1024            // 431 if the headers don't end within this
+    private let maxBodyBytes = 256 * 1024 * 1024      // 413 above this Content-Length
+    private let maxConnections = 8                    // extra HTTP connections are cancelled on accept
+    private let idleTimeout: TimeInterval = 30        // seconds without new bytes before the connection closes
+    private var idleTimers: [ObjectIdentifier: DispatchWorkItem] = [:]   // touched only on `queue`
+
+    private static let maxUploadNameLength = 255
+    private static let maxZipEntries = 1000
+    private static let maxZipEntryBytes: Int64 = 256 * 1024 * 1024
+    private static let maxZipTotalBytes: Int64 = 512 * 1024 * 1024
 
     /// Starts the server; returns the URL to show on screen, e.g. "http://192.168.1.40:8080/?key=…"
     func start(onFileReceived: @escaping () -> Void, onPadChanged: @escaping (Bool) -> Void) throws -> String {
@@ -47,8 +60,20 @@ final class BeamServer {
             throw error
         }
         padListener.newConnectionHandler = { [weak self] connection in
-            connection.start(queue: self?.queue ?? .main)
-            self?.receivePad(on: connection, authenticated: false)
+            guard let self else { connection.cancel(); return }
+            if self.pendingPadConnections.count >= self.maxPendingPadConnections {
+                connection.cancel()   // too many phones trying to log in
+                return
+            }
+            let id = ObjectIdentifier(connection)
+            self.pendingPadConnections.insert(id)
+            connection.start(queue: self.queue)
+            self.receivePad(on: connection, authenticated: false)
+            // Must send the access key in time, or the connection is dropped.
+            self.queue.asyncAfter(deadline: .now() + self.padAuthTimeout) { [weak self] in
+                guard let self, self.pendingPadConnections.remove(id) != nil else { return }
+                connection.cancel()
+            }
         }
         padListener.start(queue: queue)
         self.padListener = padListener
@@ -66,6 +91,8 @@ final class BeamServer {
         padListener = nil
         var wasConnected = false
         queue.sync {   // padConnection is only touched on `queue`
+            idleTimers.values.forEach { $0.cancel() }
+            idleTimers.removeAll()
             wasConnected = padConnection != nil
             padConnection?.cancel()
             padConnection = nil
@@ -80,33 +107,94 @@ final class BeamServer {
     // MARK: Connection handling
 
     private func accept(_ connection: NWConnection) {
+        if connections.count >= maxConnections {
+            connection.cancel()
+            return
+        }
         connections[ObjectIdentifier(connection)] = connection
         connection.start(queue: queue)
-        receive(on: connection, buffer: Data())
+        armIdleTimer(connection)
+        receive(on: connection, buffer: Data(), head: nil)
     }
 
-    private func receive(on connection: NWConnection, buffer: Data) {
+    private func receive(on connection: NWConnection, buffer: Data, head: HTTPHead?) {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 1 << 16) { [weak self] data, _, complete, error in
             guard let self else { return }
             var buffer = buffer
-            if let data { buffer.append(data) }
-
-            if let request = HTTPRequest(parsing: buffer) {
-                self.handle(request, on: connection)
+            var pendingHead = head
+            if let data = data {
+                buffer.append(data)
+                self.armIdleTimer(connection)
+            }
+            if pendingHead == nil {
+                guard let headerEnd = buffer.range(of: Data("\r\n\r\n".utf8)) else {
+                    if buffer.count > self.maxHeaderBytes {
+                        self.reject(connection, status: "431 Request Header Fields Too Large")
+                        return
+                    } else if error != nil || complete {
+                        self.close(connection)
+                        return
+                    } else {
+                        self.receive(on: connection, buffer: buffer, head: nil)
+                        return
+                    }
+                }
+                if headerEnd.upperBound > self.maxHeaderBytes {
+                    self.reject(connection, status: "431 Request Header Fields Too Large")
+                    return
+                }
+                guard let parsed = HTTPHead(parsing: buffer) else {
+                    self.close(connection)
+                    return
+                }
+                if !self.isAuthorised(parsed.path) {
+                    self.respond(connection, status: "403 Forbidden", contentType: "text/html; charset=utf-8", body: Data(Self.expiredPage.utf8))
+                    return
+                }
+                if parsed.contentLength < 0 || parsed.contentLength > self.maxBodyBytes {
+                    self.reject(connection, status: "413 Payload Too Large")
+                    return
+                }
+                pendingHead = parsed
+            }
+            guard let head = pendingHead else { return }
+            let bodyEnd = head.bodyStart + head.contentLength
+            if buffer.count >= bodyEnd {
+                self.cancelIdleTimer(connection)
+                let body = buffer.subdata(in: head.bodyStart..<bodyEnd)
+                self.handle(HTTPRequest(head: head, body: body), on: connection)
             } else if error != nil || complete {
                 self.close(connection)
             } else {
-                self.receive(on: connection, buffer: buffer)   // need more bytes
+                self.receive(on: connection, buffer: buffer, head: head)
             }
         }
+    }
+
+    /// Closes the connection if no new bytes arrive; runs on `queue`.
+    private func armIdleTimer(_ connection: NWConnection) {
+        let id = ObjectIdentifier(connection)
+        cancelIdleTimer(connection)
+        let timer = DispatchWorkItem { [weak self] in self?.close(connection) }
+        idleTimers[id] = timer
+        queue.asyncAfter(deadline: .now() + idleTimeout, execute: timer)
+    }
+
+    private func cancelIdleTimer(_ connection: NWConnection) {
+        let id = ObjectIdentifier(connection)
+        idleTimers[id]?.cancel()
+        idleTimers.removeValue(forKey: id)
+    }
+
+    /// Sends a rejection response with the specified status.
+    private func reject(_ connection: NWConnection, status: String) {
+        respond(connection, status: status, contentType: "text/plain", body: Data(status.utf8))
     }
 
     private func handle(_ request: HTTPRequest, on connection: NWConnection) {
         let parts = request.path.split(separator: "?", maxSplits: 1).map(String.init)
         let path = parts.first ?? "/"
-        let query = parts.count > 1 ? parts[1] : ""
-        let key = URLComponents(string: "/?" + query)?.queryItems?.first { $0.name == "key" }?.value ?? ""
-        guard !accessKey.isEmpty, Self.constantTimeEquals(key, accessKey) else {
+        guard isAuthorised(request.path) else {
             respond(connection, status: "403 Forbidden", contentType: "text/html; charset=utf-8",
                     body: Data(Self.expiredPage.utf8))
             return
@@ -159,13 +247,17 @@ final class BeamServer {
                 return
             }
             respond(connection, status: "200 OK", contentType: "application/octet-stream", body: data,
-                    extraHeaders: ["Content-Disposition": "attachment; filename=\"\(name)\""])
+                    extraHeaders: ["Content-Disposition": "attachment; filename=\"\(Self.safeDispositionName(name))\""])
 
         case ("PUT", let p) where p.hasPrefix("/upload/"):
             let rawName = String(p.dropFirst("/upload/".count))
                 .removingPercentEncoding ?? ""
             // Sanitize: no path separators, known extensions only.
             let name = (rawName as NSString).lastPathComponent
+            if name.count > Self.maxUploadNameLength {
+                respond(connection, status: "400 Bad Request", contentType: "text/plain", body: Data("File name is too long.".utf8))
+                return
+            }
             let ext = (name as NSString).pathExtension.lowercased()
             if ext == "zip" {
                 do {
@@ -208,6 +300,13 @@ final class BeamServer {
         }
     }
 
+    /// True when the request target carries the current access key as ?key=.
+    private func isAuthorised(_ target: String) -> Bool {
+        let query = target.split(separator: "?", maxSplits: 1).dropFirst().first.map(String.init) ?? ""
+        let key = URLComponents(string: "/?" + query)?.queryItems?.first { $0.name == "key" }?.value ?? ""
+        return !accessKey.isEmpty && Self.constantTimeEquals(key, accessKey)
+    }
+
     private func respond(_ connection: NWConnection, status: String, contentType: String, body: Data, extraHeaders: [String: String] = [:]) {
         var head = "HTTP/1.1 \(status)\r\n"
         head += "Content-Type: \(contentType)\r\n"
@@ -226,6 +325,9 @@ final class BeamServer {
     private func close(_ connection: NWConnection) {
         connection.cancel()
         connections[ObjectIdentifier(connection)] = nil
+
+        // Cancel the idle timer when the connection closes
+        cancelIdleTimer(connection)
     }
 
     // MARK: Touch pad (WebSocket, port 8081)
@@ -241,6 +343,7 @@ final class BeamServer {
             }
             let text = String(decoding: data ?? Data(), as: UTF8.self)
             if !authenticated {
+                self.pendingPadConnections.remove(ObjectIdentifier(connection))   // answered either way
                 guard !self.accessKey.isEmpty, Self.constantTimeEquals(text, self.accessKey) else {
                     connection.cancel()
                     return
@@ -271,6 +374,7 @@ final class BeamServer {
     }
 
     private func dropPad(_ connection: NWConnection) {
+        pendingPadConnections.remove(ObjectIdentifier(connection))
         connection.cancel()
         guard connection === padConnection else { return }
         padConnection = nil
@@ -316,6 +420,23 @@ final class BeamServer {
     </body></html>
     """
 
+    /// File name safe for a Content-Disposition header: plain characters only, at most 100.
+    private static func safeDispositionName(_ name: String) -> String {
+        let allowedCharacters: Set<Character> = Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ._-")
+        var safeName = ""
+        for char in name {
+            if allowedCharacters.contains(char) {
+                safeName.append(char)
+            } else {
+                safeName.append("_")
+            }
+        }
+        if safeName.count > 100 {
+            safeName = String(safeName.prefix(100))
+        }
+        return safeName
+    }
+
     /// The .zds save files in the save folder, newest first.
     private static func saveFiles() -> [URL] {
         let dir = DoomCloudStore.localSaveDirectory
@@ -341,7 +462,22 @@ final class BeamServer {
 
         let archive = try Archive(url: tempURL, accessMode: .read)
         var count = 0
-        for entry in archive where entry.type == .file {
+        var total: Int64 = 0
+        var entryCount = 0
+        var planned: [(entry: Entry, name: String, destDir: URL)] = []
+
+        // Check the whole archive before extracting anything
+        for entry in archive {
+            entryCount += 1
+            if entryCount > Self.maxZipEntries {
+                throw NSError(domain: "BeamServer", code: 2, userInfo: [NSLocalizedDescriptionKey: "That zip has more than 1000 files in it."])
+            }
+            let size = Int64(clamping: entry.uncompressedSize)
+            if size > Self.maxZipEntryBytes {
+                throw NSError(domain: "BeamServer", code: 3, userInfo: [NSLocalizedDescriptionKey: "That zip has a file bigger than 256 MB."])
+            }
+
+            guard entry.type == .file else { continue }
             let name = (entry.path as NSString).lastPathComponent
             if name.hasPrefix(".") || name.isEmpty { continue }   // skip macOS "._" metadata and hidden files
             let destDir: URL
@@ -350,10 +486,19 @@ final class BeamServer {
             case "wad", "pk3", "ipk3": destDir = DoomCloudStore.localWadDirectory
             default:                   continue
             }
-            try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
-            let dest = destDir.appendingPathComponent(name)
+
+            total += size
+            if total > Self.maxZipTotalBytes {
+                throw NSError(domain: "BeamServer", code: 4, userInfo: [NSLocalizedDescriptionKey: "The saves and games in that zip add up to more than 512 MB."])
+            }
+            planned.append((entry: entry, name: name, destDir: destDir))
+        }
+
+        for item in planned {
+            try FileManager.default.createDirectory(at: item.destDir, withIntermediateDirectories: true)
+            let dest = item.destDir.appendingPathComponent(item.name)
             try? FileManager.default.removeItem(at: dest)   // restoring replaces the file of the same name
-            _ = try archive.extract(entry, to: dest)
+            _ = try archive.extract(item.entry, to: dest)
             count += 1
         }
         guard count > 0 else {
@@ -436,12 +581,14 @@ final class BeamServer {
     """
 }
 
-/// Tiny HTTP request parser — just enough for GET and raw-body PUT with Content-Length.
-private struct HTTPRequest {
+/// Request line and headers only. Parsed before any body bytes are accepted.
+private struct HTTPHead {
     let method: String
-    let path: String
-    let body: Data
+    let path: String          // request target, including any ?query
+    let contentLength: Int    // 0 when absent; -1 when unparseable or negative
+    let bodyStart: Int        // index of the first body byte in the buffer
 
+    /// nil until the full header block (CRLFCRLF) has arrived, or if the request line is malformed.
     init?(parsing data: Data) {
         guard let headerEnd = data.range(of: Data("\r\n\r\n".utf8)) else { return nil }
         guard let headerText = String(data: data[..<headerEnd.lowerBound], encoding: .utf8) else { return nil }
@@ -453,16 +600,26 @@ private struct HTTPRequest {
         for line in lines.dropFirst() {
             let kv = line.split(separator: ":", maxSplits: 1)
             if kv.count == 2, kv[0].lowercased() == "content-length" {
-                contentLength = Int(kv[1].trimmingCharacters(in: .whitespaces)) ?? 0
+                contentLength = Int(kv[1].trimmingCharacters(in: .whitespaces)) ?? -1
             }
         }
 
-        let bodyStart = headerEnd.upperBound
-        let bodyAvailable = data.count - bodyStart
-        guard bodyAvailable >= contentLength else { return nil }   // wait for more bytes
-
         self.method = requestParts[0]
         self.path = requestParts[1]
-        self.body = data.subdata(in: bodyStart..<(bodyStart + contentLength))
+        self.contentLength = contentLength
+        self.bodyStart = headerEnd.upperBound
+    }
+}
+
+/// Tiny HTTP request parser — just enough for GET and raw-body PUT with Content-Length.
+private struct HTTPRequest {
+    let method: String
+    let path: String
+    let body: Data
+
+    init(head: HTTPHead, body: Data) {
+        self.method = head.method
+        self.path = head.path
+        self.body = body
     }
 }
