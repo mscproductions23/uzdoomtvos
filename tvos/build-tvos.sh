@@ -48,6 +48,9 @@ TVOS_MIN="${TVOS_MIN:-17.0}"
 NO_AUDIO="${NO_AUDIO:-0}"
 JOBS="${JOBS:-$(sysctl -n hw.logicalcpu 2>/dev/null || echo 4)}"
 FORCE="${FORCE:-0}"
+# Opt-in: build ZMusic standalone (step zmusic) and link it instead of the copy bundled in the engine.
+UZ_EXTERNAL_ZMUSIC="${UZ_EXTERNAL_ZMUSIC:-0}"
+case "$UZ_EXTERNAL_ZMUSIC" in 0|1) ;; *) die "UZ_EXTERNAL_ZMUSIC must be 0 or 1, got $UZ_EXTERNAL_ZMUSIC" ;; esac
 
 # Detect generator (as array for proper quoting with spaces)
 if command -v ninja >/dev/null 2>&1; then
@@ -229,6 +232,39 @@ step_sdl2() {
     mark_done "sdl2"
 }
 
+step_zmusic() {
+    check_done "zmusic" && return
+    log_header "Step 4: zmusic"
+
+    # Fail early with a clear message if the fetch step has not put ZMusic in the UZDoom tree.
+    if [[ ! -f "$SRC/uzdoom/libraries/ZMusic/CMakeLists.txt" ]]; then
+        die "ZMusic source not found at $SRC/uzdoom/libraries/ZMusic; run the fetch step first."
+    fi
+
+    # A build cache from an older separate ZMusic clone points at a different source directory; cmake refuses to reconfigure it, so start clean.
+    rm -rf "$BUILD/zmusic"
+    mkdir -p "$BUILD/zmusic"
+
+    # ZMusic and the engine each compile their own copy of i_module.cpp (class FModule); linked statically into one library they collide, so ZMusic's copy gets different names.
+    local zm_rename="-DFModule=ZMusicFModule -DFModule_SetProgDir=ZMusicFModule_SetProgDir -DFModule_GetProgDir=ZMusicFModule_GetProgDir"
+
+    # UZ_TVOS is checked by the CoreMIDI-skip patch in source/CMakeLists.txt; the engine root sets it, a standalone configure must set it itself.
+    run_step "zmusic_configure" cmake -S "$SRC/uzdoom/libraries/ZMusic" -B "$BUILD/zmusic" "${GENERATOR[@]}" "${TVOS_CMAKE_ARGS[@]}" -DBUILD_SHARED_LIBS=OFF -DZMUSIC_POSIX_GLIB_STUBS=ON -DUZ_TVOS=ON "-DCMAKE_C_FLAGS=-DUZ_TVOS=1" "-DCMAKE_CXX_FLAGS=$zm_rename -DUZ_TVOS=1"
+
+    run_step "zmusic_build" cmake --build "$BUILD/zmusic" --parallel "$JOBS"
+
+    run_step "zmusic_install" cmake --install "$BUILD/zmusic"
+
+    [[ -f "$PREFIX/lib/libzmusic.a" ]] || die "zmusic static library not found"
+    [[ -f "$PREFIX/include/zmusic.h" ]] || die "zmusic header not found"
+
+    if [[ "$UZ_EXTERNAL_ZMUSIC" != "1" ]]; then
+        echo "Note: this standalone ZMusic is only linked when UZ_EXTERNAL_ZMUSIC=1"
+    fi
+
+    mark_done "zmusic"
+}
+
 step_libvpx() {
     check_done "libvpx" && return
     log_header "Step 5: libvpx"
@@ -339,8 +375,14 @@ step_engine() {
     log_header "Step 9: engine"
 
     mkdir -p "$BUILD/uzdoom-tvos"
-    # A ZMusic from an older build (pre-5.0) would shadow the bundled headers via -I$PREFIX/include.
-    rm -f "$PREFIX/include/zmusic.h" "$PREFIX/lib/libzmusic.a"
+    if [[ "$UZ_EXTERNAL_ZMUSIC" == "1" ]]; then
+        [[ -f "$PREFIX/include/zmusic.h" ]] && [[ -f "$PREFIX/lib/libzmusic.a" ]] || die "UZ_EXTERNAL_ZMUSIC=1 but standalone ZMusic is not in $PREFIX; build it first: UZ_EXTERNAL_ZMUSIC=1 ./tvos/build-tvos.sh zmusic"
+    else
+        # A ZMusic from an older build (pre-5.0) or an external build would shadow the bundled headers via -I$PREFIX/include.
+        rm -f "$PREFIX/include/zmusic.h" "$PREFIX/lib/libzmusic.a"
+        # The standalone-ZMusic stamp must go too, or a later external build would skip step zmusic while its library is gone.
+        rm -f "$BUILD/zmusic.done"
+    fi
 
     local openal_args=()
     if [[ "$NO_AUDIO" == "1" ]]; then
@@ -349,12 +391,20 @@ step_engine() {
         openal_args=(-DDYN_OPENAL=OFF "-DOPENAL_INCLUDE_DIR=$PREFIX/include/AL" "-DOPENAL_LIBRARY=$PREFIX/lib/libopenal.a")
     fi
 
+    # The OFF is passed explicitly so a cache left by an external configure is reset.
+    local zmusic_args=()
+    if [[ "$UZ_EXTERNAL_ZMUSIC" == "1" ]]; then
+        zmusic_args=(-DUZ_EXTERNAL_ZMUSIC=ON "-DZMUSIC_INCLUDE_DIR=$PREFIX/include" "-DZMUSIC_LIBRARIES=$PREFIX/lib/libzmusic.a")
+    else
+        zmusic_args=(-DUZ_EXTERNAL_ZMUSIC=OFF -DZMUSIC_POSIX_GLIB_STUBS=ON)
+    fi
+
     run_step "engine_configure" cmake -S "$SRC/uzdoom" -B "$BUILD/uzdoom-tvos" \
         "${GENERATOR[@]}" \
         "${TVOS_CMAKE_ARGS[@]}" \
         "-DIMPORT_EXECUTABLES=$BUILD/uzdoom-host/ImportExecutables.cmake" \
         "-DSDL2_INCLUDE_DIR=$PREFIX/include/SDL2" "-DSDL2_LIBRARY=$PREFIX/lib/libSDL2.a" \
-        "-DZMUSIC_POSIX_GLIB_STUBS=ON" \
+        "${zmusic_args[@]}" \
         "-DVPX_INCLUDE_DIR=$PREFIX/include" "-DVPX_LIBRARIES=$PREFIX/lib/libvpx.a" \
         "-DCMAKE_C_FLAGS=-I$PREFIX/include" "-DCMAKE_CXX_FLAGS=-I$PREFIX/include" \
         "${openal_args[@]}"
@@ -449,7 +499,7 @@ step_summary() {
     echo "2. Pick your Apple TV as the run destination"
     echo "3. Press Run (⌘R)"
     echo ""
-    echo "Engine output appears in Xcode's console; the app also writes Caches/uzdoom.log on the device."
+    echo "Engine output appears in Xcode's console; the app also writes Caches/log-uzdoom.txt on the device."
 }
 
 # === MAIN ===
@@ -459,12 +509,13 @@ START_TIME=$(date +%s)
 if [[ "$#" -gt 0 ]] && { [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; }; then
     echo "Usage: $0 [<step>...]"
     echo ""
-    echo "Steps: fetch sdl2 libvpx openal moltenvk host-tools engine package summary all"
+    echo "Steps: fetch sdl2 zmusic libvpx openal moltenvk host-tools engine package summary all"
     echo "Note: preflight always runs first to set up directories."
     echo ""
     echo "Environment variables:"
     echo "  FORCE=1         Rebuild cached dependencies (default: skip)"
     echo "  NO_AUDIO=1      Skip OpenAL build"
+    echo "  UZ_EXTERNAL_ZMUSIC=1  Build ZMusic standalone and link it instead of the copy bundled in the engine (default 0)"
     echo "  TVOS_MIN=17.0   Minimum tvOS version (default: 17.0)"
     echo "  JOBS=N          Number of parallel build jobs (default: hw.logicalcpu)"
     echo "  WORK=/path      Work directory for sources/builds (default: tvos/work or ~/uzdoomtvos-work if repo has spaces)"
@@ -476,6 +527,7 @@ if [[ "$#" -gt 0 ]] && { [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; }; then
     echo "  $0 engine package       # Rebuild engine and package"
     echo "  FORCE=1 $0              # Rebuild cached dependencies (sdl2, libvpx, openal)"
     echo "  NO_AUDIO=1 $0           # Build without audio support"
+    echo "  UZ_EXTERNAL_ZMUSIC=1 $0 # Build everything, linking standalone ZMusic"
     exit 0
 fi
 
@@ -486,6 +538,7 @@ if [[ "$#" -eq 0 ]]; then
     # Build all
     step_fetch
     step_sdl2
+    if [[ "$UZ_EXTERNAL_ZMUSIC" == "1" ]]; then step_zmusic; fi
     step_libvpx
     step_openal
     step_moltenvk
@@ -500,6 +553,7 @@ else
             all)
                 step_fetch
                 step_sdl2
+                if [[ "$UZ_EXTERNAL_ZMUSIC" == "1" ]]; then step_zmusic; fi
                 step_libvpx
                 step_openal
                 step_moltenvk
@@ -510,6 +564,7 @@ else
                 ;;
             fetch) step_fetch ;;
             sdl2) step_sdl2 ;;
+            zmusic) step_zmusic ;;
             libvpx) step_libvpx ;;
             openal) step_openal ;;
             moltenvk) step_moltenvk ;;

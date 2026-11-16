@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 1ba030a..cffb26f 100644
+index 1ba030a..9a4a474 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -55,6 +55,11 @@ find_package(Threads REQUIRED)
@@ -94,7 +94,7 @@ index 1ba030a..cffb26f 100644
  endif()
  
  if( BZIP2_FOUND AND NOT FORCE_INTERNAL_BZIP2 )
-@@ -461,7 +480,9 @@ if ( WEBP_FOUND AND NOT FORCE_INTERNAL_WEBP )
+@@ -461,15 +480,26 @@ if ( WEBP_FOUND AND NOT FORCE_INTERNAL_WEBP )
  	set( WEBP_TARGET PkgConfig::WEBP )
  else()
  	message( STATUS "Using internal webp library" )
@@ -105,7 +105,28 @@ index 1ba030a..cffb26f 100644
  	set( WEBP_TARGET webp )
  endif()
  
-@@ -492,7 +513,9 @@ install(DIRECTORY docs/
++option( UZ_EXTERNAL_ZMUSIC "Link a separately built ZMusic (ZMUSIC_INCLUDE_DIR / ZMUSIC_LIBRARIES) instead of libraries/ZMusic" OFF )
++
+ # ZMUSIC
+-add_subdirectory( libraries/ZMusic )
+-set( ZMUSIC_ROOT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/libraries/zmusic" )
+-set( ZMUSIC_INCLUDE_DIR ${ZMUSIC_ROOT_PATH}/include )
+-set( ZMUSIC_LIBRARIES zmusic )
++if( UZ_EXTERNAL_ZMUSIC )
++	if( "${ZMUSIC_INCLUDE_DIR}" STREQUAL "" OR "${ZMUSIC_LIBRARIES}" STREQUAL "" )
++		message( FATAL_ERROR "UZ_EXTERNAL_ZMUSIC=ON needs -DZMUSIC_INCLUDE_DIR=<dir containing zmusic.h> and -DZMUSIC_LIBRARIES=<path to libzmusic.a>" )
++	endif()
++	message( STATUS "Using external ZMusic: ${ZMUSIC_LIBRARIES}" )
++else()
++	add_subdirectory( libraries/ZMusic )
++	set( ZMUSIC_ROOT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/libraries/zmusic" )
++	set( ZMUSIC_INCLUDE_DIR ${ZMUSIC_ROOT_PATH}/include )
++	set( ZMUSIC_LIBRARIES zmusic )
++endif()
+ 
+ set( LZMA_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libraries/lzma/C" )
+ 
+@@ -492,7 +522,9 @@ install(DIRECTORY docs/
  option( DYN_OPENAL "Dynamically load OpenAL" ON )
  option( BUILD_NONFREE "Build non-free assets used by commercial games" ON )
  
@@ -212,7 +233,7 @@ index be18a86..986f177 100644
  		return nullptr;
  
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 53beadc..931955a 100644
+index 53beadc..ca62c1b 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
 @@ -24,6 +24,9 @@ endif()
@@ -237,7 +258,18 @@ index 53beadc..931955a 100644
  				endif()
  			else()
  				set( NO_OPENAL ON )
-@@ -431,7 +436,17 @@ if( WIN32 )
+@@ -300,7 +305,9 @@ if (HAVE_VULKAN)
+ 	list( APPEND PROJECT_LIBRARIES "zvulkan" )
+ endif()
+ 
+-list( APPEND PROJECT_LIBRARIES "zmusic" )
++if( NOT UZ_EXTERNAL_ZMUSIC )
++	list( APPEND PROJECT_LIBRARIES "zmusic" )
++endif()
+ list( APPEND PROJECT_LIBRARIES "zwidget" )
+ list( APPEND PROJECT_LIBRARIES "${WEBP_TARGET}" )
+ 
+@@ -431,7 +438,17 @@ if( WIN32 )
  
  	set( SYSTEM_SOURCES ${SYSTEM_SOURCES} win32/zdoom.rc )
  elseif( APPLE )
@@ -256,7 +288,7 @@ index 53beadc..931955a 100644
  		set( SYSTEM_SOURCES_DIR common/platform/posix common/platform/posix/cocoa )
  		set( SYSTEM_SOURCES ${PLAT_COCOA_SOURCES} )
  		set( OTHER_SYSTEM_SOURCES ${PLAT_WIN32_SOURCES} ${PLAT_SDL_SOURCES} ${PLAT_UNIX_SOURCES} )
-@@ -1275,7 +1290,22 @@ set( GAME_SOURCES
+@@ -1275,7 +1292,22 @@ set( GAME_SOURCES
  set( GAME_NONPCH_SOURCES ${GAME_SOURCES} )
  list( REMOVE_ITEM GAME_NONPCH_SOURCES ${PCH_SOURCES} )
  
@@ -280,7 +312,7 @@ index 53beadc..931955a 100644
  
  target_include_directories( zdoom PRIVATE ${CMAKE_BINARY_DIR} )
  
-@@ -1392,9 +1422,11 @@ include_directories(
+@@ -1392,9 +1424,11 @@ include_directories(
  )
  
  set_target_properties( zdoom PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ZDOOM_OUTPUT_DIR} )
@@ -294,7 +326,7 @@ index 53beadc..931955a 100644
  	set_target_properties(zdoom PROPERTIES LINK_FLAGS "-z nostart-stop-gc")
  endif()
  
-@@ -1503,7 +1535,7 @@ if( DEM_CMAKE_COMPILER_IS_GNUCXX_COMPATIBLE )
+@@ -1503,7 +1537,7 @@ if( DEM_CMAKE_COMPILER_IS_GNUCXX_COMPATIBLE )
  		APPEND_STRING PROPERTY COMPILE_FLAGS " ${SSE2_ENABLE}" )
  endif()
  
@@ -303,7 +335,7 @@ index 53beadc..931955a 100644
  	set( LINK_FRAMEWORKS "-framework Cocoa -framework IOKit -framework OpenGL")
  
  	if( HAVE_VULKAN )
-@@ -1532,6 +1564,12 @@ if( APPLE )
+@@ -1532,6 +1566,12 @@ if( APPLE )
  	# this is enabled with xcode, but not when using ninja. Explicitly enabling it here to make builds unified
  	target_compile_definitions( zdoom PRIVATE
  		_LIBCPP_HARDENING_MODE=$<IF:$<CONFIG:Debug>,_LIBCPP_HARDENING_MODE_DEBUG,_LIBCPP_HARDENING_MODE_FAST> )
@@ -1679,3 +1711,38 @@ index 0a24cec..9fc4801 100644
  	static int GetMipLevels(int w, int h);
  
  	VkTextureImage mImage;
+diff --git a/src/common/rendering/vulkan/textures/vk_renderbuffers.cpp b/src/common/rendering/vulkan/textures/vk_renderbuffers.cpp
+index c379ee5..4675253 100644
+--- a/src/common/rendering/vulkan/textures/vk_renderbuffers.cpp
++++ b/src/common/rendering/vulkan/textures/vk_renderbuffers.cpp
+@@ -141,9 +141,28 @@ void VkRenderBuffers::CreatePipeline(int width, int height)
+ 			.DebugName("VkRenderBuffers.PipelineView")
+ 			.Create(fb->device.get());
+ 
+-		barrier.AddImage(&PipelineImage[i], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, true);
++		barrier.AddImage(&PipelineImage[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, true);
+ 	}
+-	barrier.Execute(fb->GetCommands()->GetDrawCommands());
++	auto cmdbuffer = fb->GetCommands()->GetDrawCommands();
++	barrier.Execute(cmdbuffer);
++
++	// Backported from the upstream fix for UZDoom#1116: these are loaded on first use as a
++	// render target, so they need defined contents (uninitialized memory showed as pink/green/black).
++	VkImageSubresourceRange range = {};
++	range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
++	range.layerCount = 1;
++	range.levelCount = 1;
++
++	VkClearColorValue value = {};
++	value.float32[3] = 1.0f;
++
++	VkImageTransition toColorAttachment;
++	for (int i = 0; i < NumPipelineImages; i++)
++	{
++		cmdbuffer->clearColorImage(PipelineImage[i].Image->image, PipelineImage[i].Layout, &value, 1, &range);
++		toColorAttachment.AddImage(&PipelineImage[i], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, false);
++	}
++	toColorAttachment.Execute(cmdbuffer);
+ }
+ 
+ void VkRenderBuffers::CreateScene(int width, int height, VkSampleCountFlagBits samples)

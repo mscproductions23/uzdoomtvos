@@ -245,6 +245,7 @@ cd ~/uzdoomtvos && git pull && ./tvos/install.sh
 | Frame drops or stutter | Running from Xcode slows the game down (debugger attached). For real performance, open UZDoom from the Apple TV Home screen. Also keep vsync off and the resolution at 1080p (see [Default settings](#default-settings)). Some stutter the first time new effects appear is shaders compiling; this gets better on later runs. |
 | The phone controller says "Reconnecting…" | Make sure the phone is on the same Wi-Fi and the TV still shows the QR code (**Connect iPhone…**). If it doesn't recover, scan the QR code again: each connection uses a new key. |
 | "Fetching debug symbols" takes forever | Wait up to 30 minutes. If it's still stuck, quit Xcode, restart the Apple TV and try again. |
+| Music is missing, or a song won't start | Run the install with the standalone music build: `UZ_EXTERNAL_ZMUSIC=1 ./tvos/install.sh` (the install script passes the setting on to the build script). Re-run without the setting to go back to the normal build. |
 
 For more build options (rebuilding single parts, custom settings), see [`tvos/README.md`](tvos/README.md).
 
